@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { render } from "ink";
 import meow from "meow";
+import { isCaTrusted, trustCa } from "./proxy/cert-trust.js";
 import { loadOrCreateCA, ProxyServer } from "./proxy/index.js";
 import type { CaConfig } from "./proxy/index.js";
 import { TrafficStore } from "./store/index.js";
@@ -43,18 +44,17 @@ let ca: CaConfig | undefined;
 if (httpsEnabled) {
 	const caDir = path.join(os.homedir(), ".peep");
 	const certPath = path.join(caDir, "ca-cert.pem");
-	const isNew = await import("node:fs")
-		.then((fs) => fs.existsSync(certPath))
-		.then((exists) => !exists);
 
 	ca = await loadOrCreateCA(caDir);
 
-	if (isNew) {
-		process.stderr.write(
-			"\nHTTPS interception enabled. Trust the CA certificate:\n\n" +
-				`  macOS:  sudo security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain ${certPath}\n` +
-				`  Linux:  sudo cp ${certPath} /usr/local/share/ca-certificates/peep.crt && sudo update-ca-certificates\n\n`,
-		);
+	if (!isCaTrusted(certPath)) {
+		process.stderr.write("\nPeep Proxy CA is not trusted. Installing...\n\n");
+		const ok = trustCa(certPath);
+		if (!ok) {
+			process.stderr.write(
+				"Failed to install CA. HTTPS interception may not work.\n\n",
+			);
+		}
 	}
 }
 
