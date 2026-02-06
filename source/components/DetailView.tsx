@@ -9,7 +9,6 @@ import {
 	getHighlightLanguage,
 	hasBinaryBytes,
 	isBinaryContentType,
-	isTextContentType,
 	parseContentType,
 } from "../utils/contentType.js";
 import { decompressBody } from "../utils/decompress.js";
@@ -54,7 +53,6 @@ function getDecompressedBody(entry: TrafficEntry): Buffer {
 
 function isBinary(mime: string, body: Buffer): boolean {
 	if (isBinaryContentType(mime)) return true;
-	if (isTextContentType(mime)) return false;
 	return hasBinaryBytes(body);
 }
 
