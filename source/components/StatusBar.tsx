@@ -7,7 +7,6 @@ type Props = {
 	selectedIndex: number;
 	columns: number;
 	activePanel: Panel;
-	https?: boolean;
 };
 
 const HINTS: Record<Panel, string> = {
@@ -23,10 +22,8 @@ export function StatusBar({
 	selectedIndex,
 	columns,
 	activePanel,
-	https,
 }: Props) {
-	const mode = https ? " (HTTPS)" : "";
-	const left = `Proxy :${port}${mode} | ${requestCount} request${requestCount !== 1 ? "s" : ""}`;
+	const left = `Proxy :${port} | ${requestCount} request${requestCount !== 1 ? "s" : ""}`;
 	const position =
 		requestCount > 0 ? ` [${selectedIndex + 1}/${requestCount}]` : "";
 	const right = HINTS[activePanel];
