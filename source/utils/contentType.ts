@@ -42,6 +42,14 @@ export function isBinaryContentType(mimeType: string): boolean {
 	);
 }
 
+export function isTextContentType(mimeType: string): boolean {
+	if (mimeType.startsWith("text/")) return true;
+	if (mimeType in MIME_TO_LANGUAGE) return true;
+	if (mimeType === "application/javascript") return true;
+	if (mimeType === "application/x-www-form-urlencoded") return true;
+	return false;
+}
+
 export function hasBinaryBytes(buffer: Buffer): boolean {
 	const limit = Math.min(buffer.length, 8192);
 	for (let i = 0; i < limit; i++) {

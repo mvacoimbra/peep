@@ -9,6 +9,7 @@ import {
 	getHighlightLanguage,
 	hasBinaryBytes,
 	isBinaryContentType,
+	isTextContentType,
 	parseContentType,
 } from "../utils/contentType.js";
 import { formatBytes } from "../utils/formatBytes.js";
@@ -48,7 +49,9 @@ function getRequestBodyLines(_entry: TrafficEntry): string[] {
 function isResponseBinary(entry: TrafficEntry): boolean {
 	if (!entry.response) return false;
 	const mime = parseContentType(entry.response.headers);
-	return isBinaryContentType(mime) || hasBinaryBytes(entry.response.body);
+	if (isBinaryContentType(mime)) return true;
+	if (isTextContentType(mime)) return false;
+	return hasBinaryBytes(entry.response.body);
 }
 
 function getResponseBodyLines(entry: TrafficEntry): string[] {
