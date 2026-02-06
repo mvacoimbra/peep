@@ -1,0 +1,23 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.3.14/schema.json",
+	"formatter": {
+		"indentStyle": "tab",
+		"lineEnding": "lf"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": {
+			"recommended": true
+		}
+	},
+	"files": {
+		"includes": [
+			"source/**",
+			"test.tsx",
+			"*.json",
+			"!dist",
+			"!node_modules",
+			"!.beads"
+		]
+	}
+}
