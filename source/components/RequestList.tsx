@@ -1,6 +1,7 @@
 import { Box, Text } from "ink";
 import type { SortColumn, SortConfig } from "../hooks/useSorting.js";
 import type { TrafficEntry } from "../store/index.js";
+import { BorderedBox } from "./BorderedBox.js";
 import { RequestRow } from "./RequestRow.js";
 
 type Props = {
@@ -53,14 +54,21 @@ export function RequestList({
 }: Props) {
 	if (entries.length === 0) {
 		return (
-			<Box
-				flexDirection="column"
+			<BorderedBox
+				title="Requests"
+				width={0}
 				height={height}
-				justifyContent="center"
-				alignItems="center"
+				isActive={isActive}
 			>
-				<Text dimColor>No requests captured</Text>
-			</Box>
+				<Box
+					flexDirection="column"
+					height={Math.max(0, height - 2)}
+					justifyContent="center"
+					alignItems="center"
+				>
+					<Text dimColor>No requests captured</Text>
+				</Box>
+			</BorderedBox>
 		);
 	}
 
@@ -109,16 +117,6 @@ export function RequestList({
 						columnWidths.size,
 					)}
 				</Text>
-			</Text>
-			<Text dimColor>
-				{"─".repeat(
-					columnWidths.method +
-						columnWidths.url +
-						columnWidths.status +
-						columnWidths.duration +
-						columnWidths.size +
-						9,
-				)}
 			</Text>
 			{visible.map((entry, i) => (
 				<RequestRow

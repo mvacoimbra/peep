@@ -1,4 +1,4 @@
-import { Box, Text } from "ink";
+import { Box } from "ink";
 import type { Panel } from "../hooks/useActivePanel.js";
 import type { DetailTab } from "../hooks/useDetailTabs.js";
 import type { TrafficEntry } from "../store/index.js";
@@ -21,10 +21,8 @@ export function DetailPanel({
 	width,
 	height,
 }: Props) {
-	const leftWidth = Math.floor((width - 1) / 2);
-	const rightWidth = width - 1 - leftWidth;
-
-	const separator = "│\n".repeat(height).trimEnd();
+	const leftWidth = Math.floor(width / 2);
+	const rightWidth = width - leftWidth;
 
 	return (
 		<Box height={height}>
@@ -36,9 +34,6 @@ export function DetailPanel({
 				width={leftWidth}
 				height={height}
 			/>
-			<Box width={1} flexDirection="column">
-				<Text dimColor>{separator}</Text>
-			</Box>
 			<DetailView
 				entry={entry}
 				side="response"

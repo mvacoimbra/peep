@@ -1,10 +1,7 @@
 import { Box, useApp, useInput } from "ink";
 import { useCallback, useMemo, useRef } from "react";
 import { DetailPanel } from "./components/DetailPanel.js";
-import {
-	DomainSidebar,
-	SIDEBAR_HEADER_LINES,
-} from "./components/DomainSidebar.js";
+import { DomainSidebar } from "./components/DomainSidebar.js";
 import { RequestList } from "./components/RequestList.js";
 import { StatusBar } from "./components/StatusBar.js";
 import { useActivePanel } from "./hooks/useActivePanel.js";
@@ -28,7 +25,8 @@ const COL_DURATION = 8;
 const COL_SIZE = 7;
 const COL_PADDING = 10; // leading space + 4 separators (1 each) + trailing
 const STATUS_BAR_HEIGHT = 1;
-const LIST_HEADER_LINES = 2; // header row + separator
+const LIST_HEADER_LINES = 1; // header row only (no separator, border takes care)
+const SIDEBAR_BORDER_LINES = 2; // top + bottom border
 const SIDEBAR_WIDTH = 22;
 
 export default function App({ store, port }: Props) {
@@ -40,7 +38,7 @@ export default function App({ store, port }: Props) {
 
 	const available = Math.max(1, rows - STATUS_BAR_HEIGHT);
 	const contentWidth = columns - SIDEBAR_WIDTH;
-	const sidebarViewportHeight = Math.max(1, available - SIDEBAR_HEADER_LINES);
+	const sidebarViewportHeight = Math.max(1, available - SIDEBAR_BORDER_LINES);
 
 	// Count domains for sidebar navigation (before filtering)
 	const domainCount = useMemo(() => {

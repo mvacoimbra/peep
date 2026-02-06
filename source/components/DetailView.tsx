@@ -1,8 +1,9 @@
-import { Box, Text } from "ink";
+import { Text } from "ink";
 import type { IncomingHttpHeaders } from "node:http";
 import { useDetailScroll } from "../hooks/useDetailScroll.js";
 import type { DetailTab } from "../hooks/useDetailTabs.js";
 import type { TrafficEntry } from "../store/index.js";
+import { BorderedBox } from "./BorderedBox.js";
 
 type Props = {
 	entry: TrafficEntry;
@@ -19,7 +20,7 @@ const TAB_LABELS: Record<DetailTab, string> = {
 	body: "Body",
 	raw: "Raw",
 };
-const CHROME_LINES = 2; // title + tab bar
+const CHROME_LINES = 1; // tab bar only (title is now in border)
 
 function formatHeaders(headers: IncomingHttpHeaders): string[] {
 	return Object.entries(headers).flatMap(([key, value]) => {
@@ -100,8 +101,9 @@ export function DetailView({
 	width,
 	height,
 }: Props) {
+	const innerHeight = Math.max(0, height - 2); // border top + bottom
 	const contentLines = getContentLines(entry, side, activeTab);
-	const viewportHeight = Math.max(1, height - CHROME_LINES);
+	const viewportHeight = Math.max(1, innerHeight - CHROME_LINES);
 
 	const { scrollOffset } = useDetailScroll({
 		contentHeight: contentLines.length,
@@ -115,12 +117,15 @@ export function DetailView({
 	);
 
 	const title = side === "request" ? "Request" : "Response";
+	const innerWidth = Math.max(0, width - 2);
 
 	return (
-		<Box flexDirection="column" width={width} height={height}>
-			<Text bold={isActive} dimColor={!isActive}>
-				{` ${title}`}
-			</Text>
+		<BorderedBox
+			title={title}
+			width={width}
+			height={height}
+			isActive={isActive}
+		>
 			<Text>
 				{TABS.map((tab, i) => {
 					const label = TAB_LABELS[tab];
@@ -145,9 +150,9 @@ export function DetailView({
 			</Text>
 			{visibleLines.map((line, i) => (
 				<Text key={`${scrollOffset + i}`} dimColor={!isActive}>
-					{` ${truncateLine(line, width - 1)}`}
+					{` ${truncateLine(line, innerWidth - 1)}`}
 				</Text>
 			))}
-		</Box>
+		</BorderedBox>
 	);
 }
