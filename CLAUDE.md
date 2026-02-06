@@ -56,6 +56,10 @@ Three-panel layout inspired by Proxyman:
 - TypeScript with `@sindresorhus/tsconfig` base config and `react-jsx` transform
 - Tabs for indentation, double quotes, LF line endings
 - Import compiled `.js` extensions in source files (e.g., `import App from './app.js'`)
+- **Naming conventions**:
+  - React components: `PascalCase.tsx` (e.g., `ProxyList.tsx`, `MaybeModal.tsx`)
+  - Hooks: `useCamelCase.ts` (e.g., `useProxyList.ts`)
+  - Functions/utilities: `camelCase.ts` (e.g., `formatUrl.ts`, `proxy-server.ts`)
 
 ## Validation
 
