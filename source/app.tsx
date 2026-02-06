@@ -1,9 +1,11 @@
 import { Box, useApp, useInput } from "ink";
 import { useCallback, useRef } from "react";
+import { DetailPanel } from "./components/DetailPanel.js";
 import { RequestList } from "./components/RequestList.js";
 import { StatusBar } from "./components/StatusBar.js";
 import { useActivePanel } from "./hooks/useActivePanel.js";
 import type { Panel } from "./hooks/useActivePanel.js";
+import { useDetailTabs } from "./hooks/useDetailTabs.js";
 import { useListNavigation } from "./hooks/useListNavigation.js";
 import { useSorting } from "./hooks/useSorting.js";
 import { useTerminalDimensions } from "./hooks/useTerminalDimensions.js";
@@ -43,10 +45,13 @@ export default function App({ store, port }: Props) {
 	});
 	activePanelRef.current = activePanel;
 
+	const { requestTab, responseTab } = useDetailTabs({ activePanel });
+
 	const available = Math.max(1, rows - STATUS_BAR_HEIGHT);
 	const listHeight = hasEntries
 		? Math.max(LIST_HEADER_LINES + 1, Math.floor(available * 0.4))
 		: available;
+	const detailHeight = available - listHeight;
 	const listViewportHeight = Math.max(1, listHeight - LIST_HEADER_LINES);
 
 	const colUrl = Math.max(
@@ -80,6 +85,8 @@ export default function App({ store, port }: Props) {
 		url: colUrl,
 	};
 
+	const selectedEntry = sortedEntries[selectedIndex];
+
 	return (
 		<Box flexDirection="column" height={rows}>
 			<RequestList
@@ -92,6 +99,16 @@ export default function App({ store, port }: Props) {
 				height={listHeight}
 				isActive={activePanel === "list"}
 			/>
+			{selectedEntry && detailHeight > 0 && (
+				<DetailPanel
+					entry={selectedEntry}
+					activePanel={activePanel}
+					requestTab={requestTab}
+					responseTab={responseTab}
+					width={columns}
+					height={detailHeight}
+				/>
+			)}
 			<StatusBar
 				port={port}
 				requestCount={sortedEntries.length}
