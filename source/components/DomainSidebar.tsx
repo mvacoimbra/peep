@@ -1,9 +1,10 @@
 import { Text } from "ink";
-import type { DomainItem } from "../hooks/useDomainFilter.js";
+import type { SidebarItem } from "../hooks/useDomainFilter.js";
+import { PRIMARY_COLOR } from "../theme.js";
 import { BorderedBox } from "./BorderedBox.js";
 
 type Props = {
-	domains: DomainItem[];
+	items: SidebarItem[];
 	selectedIndex: number;
 	scrollOffset: number;
 	viewportHeight: number;
@@ -12,8 +13,28 @@ type Props = {
 	isActive: boolean;
 };
 
+function formatItem(item: SidebarItem, maxWidth: number): string {
+	if (item.type === "all") {
+		return ` All (${item.count})`.slice(0, maxWidth).padEnd(maxWidth);
+	}
+	if (item.type === "group") {
+		const arrow = item.expanded ? "▼" : "▶";
+		const label = `${arrow} ${item.baseDomain} (${item.count})`;
+		return label.slice(0, maxWidth).padEnd(maxWidth);
+	}
+	const prefix = item.grouped ? "   " : " ";
+	const label = `${prefix}${item.host} (${item.count})`;
+	return label.slice(0, maxWidth).padEnd(maxWidth);
+}
+
+function itemKey(item: SidebarItem): string {
+	if (item.type === "all") return "all";
+	if (item.type === "group") return `g:${item.baseDomain}`;
+	return `d:${item.host}`;
+}
+
 export function DomainSidebar({
-	domains,
+	items,
 	selectedIndex,
 	scrollOffset,
 	viewportHeight,
@@ -21,8 +42,8 @@ export function DomainSidebar({
 	height,
 	isActive,
 }: Props) {
-	const contentWidth = width - 2; // border left + right
-	const visible = domains.slice(scrollOffset, scrollOffset + viewportHeight);
+	const contentWidth = width - 2;
+	const visible = items.slice(scrollOffset, scrollOffset + viewportHeight);
 
 	return (
 		<BorderedBox
@@ -31,23 +52,22 @@ export function DomainSidebar({
 			height={height}
 			isActive={isActive}
 		>
-			{visible.map((domain, i) => {
+			{visible.map((item, i) => {
 				const idx = scrollOffset + i;
 				const isSelected = idx === selectedIndex;
-				const label = ` ${domain.host} (${domain.count})`;
-				const text = label.slice(0, contentWidth).padEnd(contentWidth);
+				const text = formatItem(item, contentWidth);
 
 				return (
 					<Text
-						key={domain.host}
-						inverse={isSelected}
+						key={itemKey(item)}
+						backgroundColor={isSelected ? PRIMARY_COLOR : undefined}
+						color={isSelected ? "black" : undefined}
 						dimColor={!isActive && !isSelected}
 					>
 						{text}
 					</Text>
 				);
 			})}
-			{/* Fill remaining viewport lines */}
 			{visible.length < viewportHeight && (
 				<Text>
 					{`${" ".repeat(contentWidth)}\n`

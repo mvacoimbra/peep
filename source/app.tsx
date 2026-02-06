@@ -7,7 +7,7 @@ import { StatusBar } from "./components/StatusBar.js";
 import { useActivePanel } from "./hooks/useActivePanel.js";
 import type { Panel } from "./hooks/useActivePanel.js";
 import { useDetailTabs } from "./hooks/useDetailTabs.js";
-import { useDomainFilter } from "./hooks/useDomainFilter.js";
+import { useDomainGroups } from "./hooks/useDomainFilter.js";
 import { useListNavigation } from "./hooks/useListNavigation.js";
 import { useSorting } from "./hooks/useSorting.js";
 import { useTerminalDimensions } from "./hooks/useTerminalDimensions.js";
@@ -25,7 +25,7 @@ const COL_DURATION = 8;
 const COL_SIZE = 7;
 const COL_PADDING = 10; // leading space + 4 separators (1 each) + trailing
 const STATUS_BAR_HEIGHT = 1;
-const LIST_HEADER_LINES = 1; // header row only (no separator, border takes care)
+const LIST_CHROME_LINES = 3; // border top + header row + border bottom
 const SIDEBAR_BORDER_LINES = 2; // top + bottom border
 const SIDEBAR_WIDTH = 22;
 
@@ -35,31 +35,39 @@ export default function App({ store, port }: Props) {
 	const { columns, rows } = useTerminalDimensions();
 
 	const activePanelRef = useRef<Panel>("list");
+	const sidebarSelectedRef = useRef(0);
 
 	const available = Math.max(1, rows - STATUS_BAR_HEIGHT);
 	const contentWidth = columns - SIDEBAR_WIDTH;
+	const listInnerWidth = contentWidth - 2; // bordered box borders
 	const sidebarViewportHeight = Math.max(1, available - SIDEBAR_BORDER_LINES);
 
-	// Count domains for sidebar navigation (before filtering)
-	const domainCount = useMemo(() => {
-		return new Set(entries.map((e) => e.request.host)).size + 1;
-	}, [entries]);
+	// Domain grouping (expand/collapse, no dependency on selected index)
+	const { visibleItems, groups, toggleAtIndex } = useDomainGroups(entries);
 
 	// Sidebar navigation
 	const {
 		selectedIndex: sidebarSelectedIndex,
 		scrollOffset: sidebarScrollOffset,
 	} = useListNavigation({
-		itemCount: domainCount,
+		itemCount: visibleItems.length,
 		viewportHeight: sidebarViewportHeight,
 		isActive: activePanelRef.current === "sidebar",
 	});
+	sidebarSelectedRef.current = sidebarSelectedIndex;
 
-	// Domain filtering
-	const { domains, filteredEntries } = useDomainFilter({
-		entries,
-		selectedDomainIndex: sidebarSelectedIndex,
-	});
+	// Domain filtering (inline, uses selected index from navigation)
+	const filteredEntries = useMemo(() => {
+		const item = visibleItems[sidebarSelectedIndex];
+		if (!item || item.type === "all") return entries;
+		if (item.type === "domain") {
+			return entries.filter((e) => e.request.host === item.host);
+		}
+		const group = groups.find((g) => g.baseDomain === item.baseDomain);
+		if (!group) return entries;
+		const hosts = new Set(group.domains.map((d) => d.host));
+		return entries.filter((e) => hosts.has(e.request.host));
+	}, [entries, sidebarSelectedIndex, visibleItems, groups]);
 
 	const { sortedEntries, sortConfig, awaitingColumn } = useSorting({
 		entries: filteredEntries,
@@ -77,14 +85,14 @@ export default function App({ store, port }: Props) {
 	const { requestTab, responseTab } = useDetailTabs({ activePanel });
 
 	const listHeight = hasEntries
-		? Math.max(LIST_HEADER_LINES + 1, Math.floor(available * 0.4))
+		? Math.max(LIST_CHROME_LINES + 1, Math.floor(available * 0.4))
 		: available;
 	const detailHeight = available - listHeight;
-	const listViewportHeight = Math.max(1, listHeight - LIST_HEADER_LINES);
+	const listViewportHeight = Math.max(1, listHeight - LIST_CHROME_LINES);
 
 	const colUrl = Math.max(
 		10,
-		contentWidth -
+		listInnerWidth -
 			COL_METHOD -
 			COL_STATUS -
 			COL_DURATION -
@@ -100,12 +108,15 @@ export default function App({ store, port }: Props) {
 
 	useInput(
 		useCallback(
-			(input: string) => {
+			(input: string, key: { return: boolean }) => {
 				if (input === "q") {
 					exit();
 				}
+				if (key.return && activePanelRef.current === "sidebar") {
+					toggleAtIndex(sidebarSelectedRef.current);
+				}
 			},
-			[exit],
+			[exit, toggleAtIndex],
 		),
 		{ isActive: !awaitingColumn },
 	);
@@ -124,7 +135,7 @@ export default function App({ store, port }: Props) {
 		<Box flexDirection="column" height={rows}>
 			<Box flexDirection="row" height={available}>
 				<DomainSidebar
-					domains={domains}
+					items={visibleItems}
 					selectedIndex={sidebarSelectedIndex}
 					scrollOffset={sidebarScrollOffset}
 					viewportHeight={sidebarViewportHeight}
@@ -140,6 +151,7 @@ export default function App({ store, port }: Props) {
 						viewportHeight={listViewportHeight}
 						sortConfig={sortConfig}
 						columnWidths={columnWidths}
+						width={contentWidth}
 						height={listHeight}
 						isActive={activePanel === "list"}
 					/>

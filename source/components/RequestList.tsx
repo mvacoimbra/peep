@@ -17,6 +17,7 @@ type Props = {
 		size: number;
 		url: number;
 	};
+	width: number;
 	height: number;
 	isActive: boolean;
 };
@@ -49,6 +50,7 @@ export function RequestList({
 	viewportHeight,
 	sortConfig,
 	columnWidths,
+	width,
 	height,
 	isActive,
 }: Props) {
@@ -56,7 +58,7 @@ export function RequestList({
 		return (
 			<BorderedBox
 				title="Requests"
-				width={0}
+				width={width}
 				height={height}
 				isActive={isActive}
 			>
@@ -75,7 +77,12 @@ export function RequestList({
 	const visible = entries.slice(scrollOffset, scrollOffset + viewportHeight);
 
 	return (
-		<Box flexDirection="column" height={height}>
+		<BorderedBox
+			title="Requests"
+			width={width}
+			height={height}
+			isActive={isActive}
+		>
 			<Text bold dimColor={!isActive}>
 				<Text> </Text>
 				<Text>
@@ -126,6 +133,6 @@ export function RequestList({
 					columnWidths={columnWidths}
 				/>
 			))}
-		</Box>
+		</BorderedBox>
 	);
 }

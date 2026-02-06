@@ -3,6 +3,7 @@ import type { IncomingHttpHeaders } from "node:http";
 import { useDetailScroll } from "../hooks/useDetailScroll.js";
 import type { DetailTab } from "../hooks/useDetailTabs.js";
 import type { TrafficEntry } from "../store/index.js";
+import { PRIMARY_COLOR } from "../theme.js";
 import { BorderedBox } from "./BorderedBox.js";
 
 type Props = {
@@ -133,7 +134,7 @@ export function DetailView({
 					if (tab === activeTab) {
 						return (
 							<Text key={tab}>
-								<Text bold inverse={isActive}>
+								<Text bold color={PRIMARY_COLOR}>
 									{` ${label} `}
 								</Text>
 								{sep}

@@ -1,5 +1,6 @@
 import { Box, Text } from "ink";
 import type { ReactNode } from "react";
+import { PRIMARY_COLOR } from "../theme.js";
 
 type Props = {
 	title: string;
@@ -24,19 +25,27 @@ export function BorderedBox({
 	const topLine = `┌─${titleStr}${"─".repeat(remaining)}┐`;
 	const bottomLine = `└${"─".repeat(innerWidth)}┘`;
 
+	const borderColor = isActive ? PRIMARY_COLOR : undefined;
+
 	return (
 		<Box flexDirection="column" width={width} height={height}>
-			<Text bold={isActive} dimColor={!isActive}>
+			<Text bold={isActive} color={borderColor} dimColor={!isActive}>
 				{topLine}
 			</Text>
 			<Box flexDirection="row" height={innerHeight}>
-				<Text dimColor={!isActive}>{"│\n".repeat(innerHeight).trimEnd()}</Text>
+				<Text color={borderColor} dimColor={!isActive}>
+					{"│\n".repeat(innerHeight).trimEnd()}
+				</Text>
 				<Box flexDirection="column" width={innerWidth}>
 					{children}
 				</Box>
-				<Text dimColor={!isActive}>{"│\n".repeat(innerHeight).trimEnd()}</Text>
+				<Text color={borderColor} dimColor={!isActive}>
+					{"│\n".repeat(innerHeight).trimEnd()}
+				</Text>
 			</Box>
-			<Text dimColor={!isActive}>{bottomLine}</Text>
+			<Text color={borderColor} dimColor={!isActive}>
+				{bottomLine}
+			</Text>
 		</Box>
 	);
 }

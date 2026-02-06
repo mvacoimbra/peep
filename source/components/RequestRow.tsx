@@ -1,5 +1,6 @@
 import { Text } from "ink";
 import type { TrafficEntry } from "../store/index.js";
+import { PRIMARY_COLOR } from "../theme.js";
 
 type Props = {
 	entry: TrafficEntry;
@@ -82,7 +83,7 @@ export function RequestRow({ entry, isSelected, columnWidths }: Props) {
 
 	if (isSelected) {
 		return (
-			<Text inverse>
+			<Text backgroundColor={PRIMARY_COLOR} color="black">
 				<Text> </Text>
 				<Text>{method}</Text>
 				<Text> </Text>
