@@ -1,8 +1,12 @@
 import { randomUUID } from "node:crypto";
 import * as http from "node:http";
+import * as https from "node:https";
 import * as net from "node:net";
+import * as tls from "node:tls";
 import { EventEmitter } from "node:events";
+import { generateHostCert } from "./ca.js";
 import type {
+	CaConfig,
 	ProxyConfig,
 	ProxyEventMap,
 	ProxyRequestEvent,
@@ -28,6 +32,7 @@ export class ProxyServer {
 	readonly #config: ProxyConfig;
 	readonly #server: http.Server;
 	readonly #emitter: EventEmitter & TypedEmitter;
+	readonly #certCache = new Map<string, { certPem: string; keyPem: string }>();
 
 	constructor(config: ProxyConfig) {
 		this.#config = config;
@@ -145,18 +150,33 @@ export class ProxyServer {
 		clientSocket: net.Socket,
 		head: Buffer,
 	): void => {
-		const id: RequestId = randomUUID();
 		const [host, portStr] = (req.url ?? "").split(":");
 		const port = Number.parseInt(portStr ?? "443", 10);
+		const hostname = host ?? "";
+
+		if (this.#config.ca) {
+			this.#handleMitm(hostname, port, clientSocket, head);
+		} else {
+			this.#handleTunnel(hostname, port, clientSocket, head);
+		}
+	};
+
+	#handleTunnel(
+		host: string,
+		port: number,
+		clientSocket: net.Socket,
+		head: Buffer,
+	): void {
+		const id: RequestId = randomUUID();
 
 		this.#emitter.emit("connect", {
 			id,
-			host: host ?? "",
+			host,
 			port,
 			timestamp: Date.now(),
 		});
 
-		const upstreamSocket = net.connect(port, host ?? "", () => {
+		const upstreamSocket = net.connect(port, host, () => {
 			clientSocket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
 			if (head.length > 0) {
 				upstreamSocket.write(head);
@@ -173,5 +193,105 @@ export class ProxyServer {
 		clientSocket.on("error", () => {
 			upstreamSocket.end();
 		});
-	};
+	}
+
+	#handleMitm(
+		host: string,
+		port: number,
+		clientSocket: net.Socket,
+		_head: Buffer,
+	): void {
+		const ca = this.#config.ca as CaConfig;
+
+		let hostCert = this.#certCache.get(host);
+		if (!hostCert) {
+			hostCert = generateHostCert(host, ca);
+			this.#certCache.set(host, hostCert);
+		}
+
+		const secureContext = tls.createSecureContext({
+			cert: hostCert.certPem,
+			key: hostCert.keyPem,
+		});
+
+		clientSocket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
+
+		const tlsSocket = new tls.TLSSocket(clientSocket, {
+			isServer: true,
+			secureContext,
+		});
+
+		const mitmServer = http.createServer(
+			(clientReq: http.IncomingMessage, clientRes: http.ServerResponse) => {
+				const id: RequestId = randomUUID();
+				const timestamp = Date.now();
+				const url = `https://${host}${clientReq.url ?? "/"}`;
+				const pathAndSearch = clientReq.url ?? "/";
+
+				const requestEvent: ProxyRequestEvent = {
+					id,
+					method: clientReq.method ?? "GET",
+					url,
+					host,
+					path: pathAndSearch,
+					headers: clientReq.headers,
+					timestamp,
+				};
+				this.#emitter.emit("request", requestEvent);
+
+				const upstreamOptions: https.RequestOptions = {
+					hostname: host,
+					port,
+					path: pathAndSearch,
+					method: clientReq.method,
+					headers: { ...clientReq.headers, host },
+				};
+
+				const upstreamReq = https.request(upstreamOptions, (upstreamRes) => {
+					const chunks: Buffer[] = [];
+
+					upstreamRes.on("data", (chunk: Buffer) => {
+						chunks.push(chunk);
+					});
+
+					upstreamRes.on("end", () => {
+						const body = Buffer.concat(chunks);
+						this.#emitter.emit("response", {
+							id,
+							statusCode: upstreamRes.statusCode ?? 0,
+							headers: upstreamRes.headers,
+							body,
+							duration: Date.now() - timestamp,
+						});
+					});
+
+					clientRes.writeHead(
+						upstreamRes.statusCode ?? 502,
+						upstreamRes.headers,
+					);
+					upstreamRes.pipe(clientRes);
+				});
+
+				upstreamReq.on("error", (error) => {
+					this.#emitter.emit("error", { id, error, phase: "request" });
+					if (!clientRes.headersSent) {
+						clientRes.writeHead(502, { "Content-Type": "text/plain" });
+					}
+					clientRes.end("Bad Gateway");
+				});
+
+				clientReq.pipe(upstreamReq);
+			},
+		);
+
+		mitmServer.emit("connection", tlsSocket);
+
+		const cleanup = () => {
+			mitmServer.close();
+		};
+
+		tlsSocket.on("close", cleanup);
+		tlsSocket.on("error", cleanup);
+		clientSocket.on("error", cleanup);
+	}
 }
