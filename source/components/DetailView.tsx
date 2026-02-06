@@ -1,9 +1,18 @@
+import cliTruncate from "cli-truncate";
 import { Text } from "ink";
 import type { IncomingHttpHeaders } from "node:http";
 import { useDetailScroll } from "../hooks/useDetailScroll.js";
 import type { DetailTab } from "../hooks/useDetailTabs.js";
 import type { TrafficEntry } from "../store/index.js";
 import { PRIMARY_COLOR } from "../theme.js";
+import {
+	getHighlightLanguage,
+	hasBinaryBytes,
+	isBinaryContentType,
+	parseContentType,
+} from "../utils/contentType.js";
+import { formatBytes } from "../utils/formatBytes.js";
+import { highlightBody } from "../utils/highlightBody.js";
 import { BorderedBox } from "./BorderedBox.js";
 
 type Props = {
@@ -36,6 +45,12 @@ function getRequestBodyLines(_entry: TrafficEntry): string[] {
 	return ["Body not captured"];
 }
 
+function isResponseBinary(entry: TrafficEntry): boolean {
+	if (!entry.response) return false;
+	const mime = parseContentType(entry.response.headers);
+	return isBinaryContentType(mime) || hasBinaryBytes(entry.response.body);
+}
+
 function getResponseBodyLines(entry: TrafficEntry): string[] {
 	if (entry.state === "pending" || !entry.response) {
 		return ["Waiting for response..."];
@@ -43,7 +58,15 @@ function getResponseBodyLines(entry: TrafficEntry): string[] {
 	if (entry.response.body.length === 0) {
 		return ["Empty body"];
 	}
-	return entry.response.body.toString("utf-8").split("\n");
+	if (isResponseBinary(entry)) {
+		const mime = parseContentType(entry.response.headers) || "unknown";
+		const size = formatBytes(entry.response.body.length);
+		return [`[Binary content: ${mime}, ${size}]`];
+	}
+	const text = entry.response.body.toString("utf-8");
+	const mime = parseContentType(entry.response.headers);
+	const language = getHighlightLanguage(mime);
+	return highlightBody(text, language).split("\n");
 }
 
 function formatRawRequest(entry: TrafficEntry): string[] {
@@ -62,7 +85,13 @@ function formatRawResponse(entry: TrafficEntry): string[] {
 	lines.push(...formatHeaders(headers));
 	if (body.length > 0) {
 		lines.push("");
-		lines.push(...body.toString("utf-8").split("\n"));
+		if (isResponseBinary(entry)) {
+			const mime = parseContentType(headers) || "unknown";
+			const size = formatBytes(body.length);
+			lines.push(`[Binary content: ${mime}, ${size}]`);
+		} else {
+			lines.push(...body.toString("utf-8").split("\n"));
+		}
 	}
 	return lines;
 }
@@ -90,8 +119,7 @@ function getContentLines(
 }
 
 function truncateLine(line: string, width: number): string {
-	if (line.length <= width) return line;
-	return `${line.slice(0, width - 1)}…`;
+	return cliTruncate(line, width);
 }
 
 export function DetailView({
