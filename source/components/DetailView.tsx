@@ -12,6 +12,7 @@ import {
 	isTextContentType,
 	parseContentType,
 } from "../utils/contentType.js";
+import { decompressBody } from "../utils/decompress.js";
 import { formatBytes } from "../utils/formatBytes.js";
 import { highlightBody } from "../utils/highlightBody.js";
 import { BorderedBox } from "./BorderedBox.js";
@@ -46,12 +47,15 @@ function getRequestBodyLines(_entry: TrafficEntry): string[] {
 	return ["Body not captured"];
 }
 
-function isResponseBinary(entry: TrafficEntry): boolean {
-	if (!entry.response) return false;
-	const mime = parseContentType(entry.response.headers);
+function getDecompressedBody(entry: TrafficEntry): Buffer {
+	if (!entry.response) return Buffer.alloc(0);
+	return decompressBody(entry.response.body, entry.response.headers);
+}
+
+function isBinary(mime: string, body: Buffer): boolean {
 	if (isBinaryContentType(mime)) return true;
 	if (isTextContentType(mime)) return false;
-	return hasBinaryBytes(entry.response.body);
+	return hasBinaryBytes(body);
 }
 
 function getResponseBodyLines(entry: TrafficEntry): string[] {
@@ -61,13 +65,14 @@ function getResponseBodyLines(entry: TrafficEntry): string[] {
 	if (entry.response.body.length === 0) {
 		return ["Empty body"];
 	}
-	if (isResponseBinary(entry)) {
-		const mime = parseContentType(entry.response.headers) || "unknown";
-		const size = formatBytes(entry.response.body.length);
-		return [`[Binary content: ${mime}, ${size}]`];
-	}
-	const text = entry.response.body.toString("utf-8");
+	const body = getDecompressedBody(entry);
 	const mime = parseContentType(entry.response.headers);
+	if (isBinary(mime, body)) {
+		const label = mime || "unknown";
+		const size = formatBytes(entry.response.body.length);
+		return [`[Binary content: ${label}, ${size}]`];
+	}
+	const text = body.toString("utf-8");
 	const language = getHighlightLanguage(mime);
 	return highlightBody(text, language).split("\n");
 }
@@ -88,12 +93,14 @@ function formatRawResponse(entry: TrafficEntry): string[] {
 	lines.push(...formatHeaders(headers));
 	if (body.length > 0) {
 		lines.push("");
-		if (isResponseBinary(entry)) {
-			const mime = parseContentType(headers) || "unknown";
+		const decompressed = getDecompressedBody(entry);
+		const mime = parseContentType(headers);
+		if (isBinary(mime, decompressed)) {
+			const label = mime || "unknown";
 			const size = formatBytes(body.length);
-			lines.push(`[Binary content: ${mime}, ${size}]`);
+			lines.push(`[Binary content: ${label}, ${size}]`);
 		} else {
-			lines.push(...body.toString("utf-8").split("\n"));
+			lines.push(...decompressed.toString("utf-8").split("\n"));
 		}
 	}
 	return lines;
