@@ -18,15 +18,13 @@ export function StatusBar({
 		requestCount > 0 ? ` [${selectedIndex + 1}/${requestCount}]` : "";
 	const right = "j/k:scroll  gg/G:jump  q:quit";
 	const leftFull = left + position;
-	const gap = Math.max(1, columns - leftFull.length - right.length);
+	const content = ` ${leftFull}${" ".repeat(Math.max(1, columns - leftFull.length - right.length - 2))}${right} `;
+	const line = content.slice(0, columns);
 
 	return (
 		<Box>
 			<Text dimColor inverse>
-				{" "}
-				{leftFull}
-				{" ".repeat(gap)}
-				{right}{" "}
+				{line}
 			</Text>
 		</Box>
 	);
