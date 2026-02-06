@@ -34,7 +34,7 @@ export function useDetailTabs({ activePanel }: Options): Result {
 				setResponseTab(tab);
 			}
 		},
-		{ isActive: activePanel !== "list" },
+		{ isActive: activePanel === "request" || activePanel === "response" },
 	);
 
 	return { requestTab, responseTab };

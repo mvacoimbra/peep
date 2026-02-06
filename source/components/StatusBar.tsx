@@ -10,7 +10,8 @@ type Props = {
 };
 
 const HINTS: Record<Panel, string> = {
-	list: "j/k:scroll  gg/G:jump  l:detail  s:sort  q:quit",
+	sidebar: "j/k:scroll  gg/G:jump  l:list  q:quit",
+	list: "j/k:scroll  gg/G:jump  h:sidebar  l:detail  s:sort  q:quit",
 	request: "j/k:scroll  gg/G:jump  h/l:panel  1/2/3:tab  q:quit",
 	response: "j/k:scroll  gg/G:jump  h/l:panel  1/2/3:tab  q:quit",
 };
