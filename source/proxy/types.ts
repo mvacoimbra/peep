@@ -1,8 +1,14 @@
 import type { IncomingHttpHeaders } from "node:http";
 
+export type CaConfig = {
+	certPem: string;
+	keyPem: string;
+};
+
 export type ProxyConfig = {
 	port: number;
 	hostname?: string;
+	ca?: CaConfig;
 };
 
 export type RequestId = string;
