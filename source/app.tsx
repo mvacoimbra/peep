@@ -20,6 +20,7 @@ import type { TrafficStore } from "./store/index.js";
 type Props = {
 	store: TrafficStore;
 	port: number;
+	https?: boolean;
 };
 
 const COL_METHOD = 7;
@@ -31,7 +32,7 @@ const STATUS_BAR_HEIGHT = 1;
 const LIST_HEADER_LINES = 2; // header row + separator
 const SIDEBAR_WIDTH = 22;
 
-export default function App({ store, port }: Props) {
+export default function App({ store, port, https }: Props) {
 	const { exit } = useApp();
 	const entries = useTrafficEntries(store);
 	const { columns, rows } = useTerminalDimensions();
@@ -163,6 +164,7 @@ export default function App({ store, port }: Props) {
 				selectedIndex={selectedIndex}
 				columns={columns}
 				activePanel={activePanel}
+				https={https}
 			/>
 		</Box>
 	);
