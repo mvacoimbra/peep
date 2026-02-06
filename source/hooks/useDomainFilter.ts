@@ -95,5 +95,33 @@ export function useDomainGroups(entries: TrafficEntry[]) {
 		[visibleItems],
 	);
 
-	return { visibleItems, groups, toggleAtIndex };
+	const expandAtIndex = useCallback(
+		(index: number) => {
+			const item = visibleItems[index];
+			if (!item || item.type !== "group" || item.expanded) return;
+			setExpandedGroups((prev) => new Set([...prev, item.baseDomain]));
+		},
+		[visibleItems],
+	);
+
+	const collapseAtIndex = useCallback(
+		(index: number) => {
+			const item = visibleItems[index];
+			if (!item || item.type !== "group" || !item.expanded) return;
+			setExpandedGroups((prev) => {
+				const next = new Set(prev);
+				next.delete(item.baseDomain);
+				return next;
+			});
+		},
+		[visibleItems],
+	);
+
+	return {
+		visibleItems,
+		groups,
+		toggleAtIndex,
+		expandAtIndex,
+		collapseAtIndex,
+	};
 }

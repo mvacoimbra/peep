@@ -5,7 +5,6 @@ import { DomainSidebar } from "./components/DomainSidebar.js";
 import { RequestList } from "./components/RequestList.js";
 import { StatusBar } from "./components/StatusBar.js";
 import { useActivePanel } from "./hooks/useActivePanel.js";
-import type { Panel } from "./hooks/useActivePanel.js";
 import { useDetailTabs } from "./hooks/useDetailTabs.js";
 import { useDomainGroups } from "./hooks/useDomainFilter.js";
 import { useListNavigation } from "./hooks/useListNavigation.js";
@@ -34,7 +33,11 @@ export default function App({ store, port }: Props) {
 	const entries = useTrafficEntries(store);
 	const { columns, rows } = useTerminalDimensions();
 
-	const activePanelRef = useRef<Panel>("list");
+	// Refs to break circular deps: useActivePanel needs hasEntries/awaitingColumn
+	// which come from hooks that need activePanel. Refs use previous render values
+	// for those guards, while activePanel itself is always fresh.
+	const hasSelectionRef = useRef(false);
+	const awaitingColumnRef = useRef(false);
 	const sidebarSelectedRef = useRef(0);
 
 	const available = Math.max(1, rows - STATUS_BAR_HEIGHT);
@@ -42,17 +45,24 @@ export default function App({ store, port }: Props) {
 	const listInnerWidth = contentWidth - 2; // bordered box borders
 	const sidebarViewportHeight = Math.max(1, available - SIDEBAR_BORDER_LINES);
 
-	// Domain grouping (expand/collapse, no dependency on selected index)
-	const { visibleItems, groups, toggleAtIndex } = useDomainGroups(entries);
+	// Active panel — called first so activePanel is fresh for isActive guards
+	const { activePanel, setActivePanel } = useActivePanel({
+		hasSelection: hasSelectionRef.current,
+		awaitingColumn: awaitingColumnRef.current,
+	});
 
-	// Sidebar navigation
+	// Domain grouping (expand/collapse, no dependency on selected index)
+	const { visibleItems, groups, expandAtIndex, collapseAtIndex } =
+		useDomainGroups(entries);
+
+	// Sidebar navigation — uses activePanel directly (not a ref)
 	const {
 		selectedIndex: sidebarSelectedIndex,
 		scrollOffset: sidebarScrollOffset,
 	} = useListNavigation({
 		itemCount: visibleItems.length,
 		viewportHeight: sidebarViewportHeight,
-		isActive: activePanelRef.current === "sidebar",
+		isActive: activePanel === "sidebar",
 	});
 	sidebarSelectedRef.current = sidebarSelectedIndex;
 
@@ -71,16 +81,14 @@ export default function App({ store, port }: Props) {
 
 	const { sortedEntries, sortConfig, awaitingColumn } = useSorting({
 		entries: filteredEntries,
-		isActive: activePanelRef.current === "list",
+		isActive: activePanel === "list",
 	});
 
 	const hasEntries = sortedEntries.length > 0;
 
-	const { activePanel } = useActivePanel({
-		hasSelection: hasEntries,
-		awaitingColumn,
-	});
-	activePanelRef.current = activePanel;
+	// Update refs for next render
+	hasSelectionRef.current = hasEntries;
+	awaitingColumnRef.current = awaitingColumn;
 
 	const { requestTab, responseTab } = useDetailTabs({ activePanel });
 
@@ -112,11 +120,17 @@ export default function App({ store, port }: Props) {
 				if (input === "q") {
 					exit();
 				}
-				if (key.return && activePanelRef.current === "sidebar") {
-					toggleAtIndex(sidebarSelectedRef.current);
+				if (activePanel === "sidebar") {
+					if (key.return) {
+						setActivePanel("list");
+					} else if (input === "l") {
+						expandAtIndex(sidebarSelectedRef.current);
+					} else if (input === "h") {
+						collapseAtIndex(sidebarSelectedRef.current);
+					}
 				}
 			},
-			[exit, toggleAtIndex],
+			[exit, activePanel, expandAtIndex, collapseAtIndex, setActivePanel],
 		),
 		{ isActive: !awaitingColumn },
 	);

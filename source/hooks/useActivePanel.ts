@@ -10,9 +10,10 @@ type Options = {
 
 type Result = {
 	activePanel: Panel;
+	setActivePanel: (panel: Panel) => void;
 };
 
-const PANEL_ORDER: Panel[] = ["sidebar", "list", "request", "response"];
+const PANEL_ORDER: Panel[] = ["list", "request", "response"];
 
 export function useActivePanel({
 	hasSelection,
@@ -30,30 +31,43 @@ export function useActivePanel({
 		}
 	}, [hasSelection, activePanel]);
 
-	useInput((input) => {
-		if (awaitingColumn) return;
-		if (input === "l") {
-			setActivePanel((current) => {
-				const idx = PANEL_ORDER.indexOf(current);
-				const next = PANEL_ORDER[idx + 1];
-				if (!next) return current;
-				// Block entering request/response without selection
-				if (!hasSelection && (next === "request" || next === "response")) {
-					return current;
-				}
-				return next;
-			});
-			return;
-		}
+	useInput(
+		(input, key) => {
+			if (awaitingColumn) return;
 
-		if (input === "h") {
-			setActivePanel((current) => {
-				const idx = PANEL_ORDER.indexOf(current);
-				const prev = PANEL_ORDER[idx - 1];
-				return prev ?? current;
-			});
-		}
-	});
+			// Esc → sidebar
+			if (key.escape) {
+				setActivePanel("sidebar");
+				return;
+			}
 
-	return { activePanel };
+			// l → next panel (list → request → response)
+			if (input === "l") {
+				setActivePanel((current) => {
+					if (current === "sidebar") return current;
+					const idx = PANEL_ORDER.indexOf(current);
+					const next = PANEL_ORDER[idx + 1];
+					if (!next) return current;
+					if (!hasSelection && (next === "request" || next === "response")) {
+						return current;
+					}
+					return next;
+				});
+				return;
+			}
+
+			// h → prev panel (response → request → list)
+			if (input === "h") {
+				setActivePanel((current) => {
+					if (current === "sidebar") return current;
+					const idx = PANEL_ORDER.indexOf(current);
+					const prev = PANEL_ORDER[idx - 1];
+					return prev ?? current;
+				});
+			}
+		},
+		{ isActive: activePanel !== "sidebar" },
+	);
+
+	return { activePanel, setActivePanel };
 }

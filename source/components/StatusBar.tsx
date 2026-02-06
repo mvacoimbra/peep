@@ -10,10 +10,10 @@ type Props = {
 };
 
 const HINTS: Record<Panel, string> = {
-	sidebar: "j/k:scroll  gg/G:jump  l:list  q:quit",
-	list: "j/k:scroll  gg/G:jump  h:sidebar  l:detail  s:sort  q:quit",
-	request: "j/k:scroll  gg/G:jump  h/l:panel  1/2/3:tab  q:quit",
-	response: "j/k:scroll  gg/G:jump  h/l:panel  1/2/3:tab  q:quit",
+	sidebar: "j/k:scroll  h/l:group  Enter:select  q:quit",
+	list: "j/k:scroll  l:detail  Esc:sidebar  s:sort  q:quit",
+	request: "j/k:scroll  h/l:panel  1/2/3:tab  Esc:sidebar  q:quit",
+	response: "j/k:scroll  h/l:panel  1/2/3:tab  Esc:sidebar  q:quit",
 };
 
 export function StatusBar({
