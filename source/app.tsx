@@ -1,5 +1,10 @@
-import { Text, useApp, useInput } from "ink";
-import { useCallback, useEffect, useState } from "react";
+import { Box, useApp, useInput } from "ink";
+import { useCallback } from "react";
+import { RequestList } from "./components/RequestList.js";
+import { StatusBar } from "./components/StatusBar.js";
+import { useListNavigation } from "./hooks/useListNavigation.js";
+import { useTerminalDimensions } from "./hooks/useTerminalDimensions.js";
+import { useTrafficEntries } from "./hooks/useTrafficEntries.js";
 import type { TrafficStore } from "./store/index.js";
 
 type Props = {
@@ -7,20 +12,27 @@ type Props = {
 	port: number;
 };
 
+const COL_METHOD = 7;
+const COL_STATUS = 6;
+const COL_DURATION = 8;
+const COL_PADDING = 8; // leading space + 3 separators (1 each) + trailing
+const HEADER_LINES = 3; // header row + separator + status bar
+
 export default function App({ store, port }: Props) {
 	const { exit } = useApp();
-	const [count, setCount] = useState(0);
+	const entries = useTrafficEntries(store);
+	const { columns, rows } = useTerminalDimensions();
 
-	useEffect(() => {
-		const onAdd = () => setCount(store.size);
-		const onUpdate = () => setCount(store.size);
-		store.on("add", onAdd);
-		store.on("update", onUpdate);
-		return () => {
-			store.off("add", onAdd);
-			store.off("update", onUpdate);
-		};
-	}, [store]);
+	const colUrl = Math.max(
+		10,
+		columns - COL_METHOD - COL_STATUS - COL_DURATION - COL_PADDING,
+	);
+	const viewportHeight = Math.max(1, rows - HEADER_LINES);
+
+	const { selectedIndex, scrollOffset } = useListNavigation({
+		itemCount: entries.length,
+		viewportHeight,
+	});
 
 	useInput(
 		useCallback(
@@ -33,11 +45,28 @@ export default function App({ store, port }: Props) {
 		),
 	);
 
+	const columnWidths = {
+		method: COL_METHOD,
+		status: COL_STATUS,
+		duration: COL_DURATION,
+		url: colUrl,
+	};
+
 	return (
-		<Text>
-			Proxy listening on port <Text color="green">{port}</Text> ·{" "}
-			<Text color="cyan">{count}</Text> requests captured · press{" "}
-			<Text bold>q</Text> to quit
-		</Text>
+		<Box flexDirection="column" height={rows}>
+			<RequestList
+				entries={entries}
+				selectedIndex={selectedIndex}
+				scrollOffset={scrollOffset}
+				viewportHeight={viewportHeight}
+				columnWidths={columnWidths}
+			/>
+			<StatusBar
+				port={port}
+				requestCount={entries.length}
+				selectedIndex={selectedIndex}
+				columns={columns}
+			/>
+		</Box>
 	);
 }

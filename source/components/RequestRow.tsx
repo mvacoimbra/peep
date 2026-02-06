@@ -1,0 +1,96 @@
+import { Text } from "ink";
+import type { TrafficEntry } from "../store/index.js";
+
+type Props = {
+	entry: TrafficEntry;
+	isSelected: boolean;
+	columnWidths: {
+		method: number;
+		status: number;
+		duration: number;
+		url: number;
+	};
+};
+
+const METHOD_COLORS: Record<string, string> = {
+	GET: "green",
+	POST: "yellow",
+	PUT: "blue",
+	DELETE: "red",
+	PATCH: "magenta",
+};
+
+function formatMethod(method: string, width: number): string {
+	return method.slice(0, width).padEnd(width);
+}
+
+function formatStatus(entry: TrafficEntry, width: number): string {
+	if (entry.state === "pending") return "---".padEnd(width);
+	if (entry.state === "error") return "ERR".padEnd(width);
+	const code = String(entry.response?.statusCode ?? "---");
+	return code.slice(0, width).padEnd(width);
+}
+
+function getStatusColor(entry: TrafficEntry): string | undefined {
+	if (entry.state === "pending") return undefined;
+	if (entry.state === "error") return "red";
+	const code = entry.response?.statusCode;
+	if (!code) return undefined;
+	if (code < 300) return "green";
+	if (code < 400) return "cyan";
+	if (code < 500) return "yellow";
+	return "red";
+}
+
+function formatDuration(entry: TrafficEntry, width: number): string {
+	if (entry.state === "pending") return "...".padEnd(width);
+	const ms = entry.response?.duration;
+	if (ms === undefined) return "---".padEnd(width);
+	const text =
+		ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${Math.round(ms)}ms`;
+	return text.slice(0, width).padEnd(width);
+}
+
+function truncate(text: string, maxLen: number): string {
+	if (text.length <= maxLen) return text.padEnd(maxLen);
+	return `${text.slice(0, maxLen - 1)}…`;
+}
+
+export function RequestRow({ entry, isSelected, columnWidths }: Props) {
+	const method = formatMethod(entry.request.method, columnWidths.method);
+	const url = truncate(entry.request.path, columnWidths.url);
+	const status = formatStatus(entry, columnWidths.status);
+	const duration = formatDuration(entry, columnWidths.duration);
+	const methodColor = METHOD_COLORS[entry.request.method] ?? "white";
+	const statusColor = getStatusColor(entry);
+
+	if (isSelected) {
+		return (
+			<Text inverse>
+				<Text> </Text>
+				<Text>{method}</Text>
+				<Text> </Text>
+				<Text>{url}</Text>
+				<Text> </Text>
+				<Text>{status}</Text>
+				<Text> </Text>
+				<Text>{duration}</Text>
+			</Text>
+		);
+	}
+
+	return (
+		<Text>
+			<Text> </Text>
+			<Text color={methodColor}>{method}</Text>
+			<Text> </Text>
+			<Text>{url}</Text>
+			<Text> </Text>
+			<Text color={statusColor} dimColor={entry.state === "pending"}>
+				{status}
+			</Text>
+			<Text> </Text>
+			<Text dimColor={entry.state === "pending"}>{duration}</Text>
+		</Text>
+	);
+}
