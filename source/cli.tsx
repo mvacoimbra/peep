@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import { render } from "ink";
 import meow from "meow";
+import { ProxyServer } from "./proxy/index.js";
+import { TrafficStore } from "./store/index.js";
 import App from "./app.js";
 
 const cli = meow(
@@ -9,20 +11,31 @@ const cli = meow(
 	  $ peep
 
 	Options
-		--name  Your name
+		--port  Proxy port (default: 8080)
 
 	Examples
-	  $ peep --name=Jane
-	  Hello, Jane
+	  $ peep --port=3128
 `,
 	{
 		importMeta: import.meta,
 		flags: {
-			name: {
-				type: "string",
+			port: {
+				type: "number",
+				default: 8080,
 			},
 		},
 	},
 );
 
-render(<App name={cli.flags.name} />);
+const port = cli.flags.port;
+const proxy = new ProxyServer({ port });
+const store = new TrafficStore(proxy);
+
+await proxy.start();
+
+const { waitUntilExit } = render(<App store={store} port={port} />);
+
+await waitUntilExit();
+
+store.destroy();
+await proxy.stop();
