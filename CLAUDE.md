@@ -23,6 +23,32 @@ pnpm format      # Auto-format with Biome
 - **Main component**: `source/app.tsx` - root React component
 - **Build output**: `dist/` (compiled JS, entry is `dist/cli.js`)
 
+## UX
+
+### Layout
+
+Three-panel layout inspired by Proxyman:
+
+```
+┌──────────┬──────────────────────────────────────────────┐
+│ Domains  │  Request List (sortable columns)             │
+│ sidebar  │  ID | URL | Method | Status | Duration | ... │
+│          ├──────────────────────┬───────────────────────┤
+│          │  Request detail      │  Response detail      │
+│          │  Header | Body | Raw │  Header | Body | Raw  │
+└──────────┴──────────────────────┴───────────────────────┘
+```
+
+- **Left sidebar**: domain/host filter tree
+- **Top right**: request list table with sortable columns (method, URL, status, duration, size)
+- **Bottom left**: selected request detail (headers, body, raw)
+- **Bottom right**: selected response detail (headers, body, raw)
+
+### Navigation
+
+- Vim-style keyboard navigation: `h`/`l` to switch panels, `j`/`k` to scroll, `gg`/`G` for top/bottom, `q` to quit
+- Tab switching within detail views (Header / Body / Raw)
+
 ## Code Style
 
 - Biome for linting and formatting
