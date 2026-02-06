@@ -37,7 +37,9 @@ const certPath = path.join(caDir, "ca-cert.pem");
 const ca = await loadOrCreateCA(caDir);
 
 if (!isCaTrusted(certPath)) {
-	process.stderr.write("\nPeep Proxy CA is not trusted. Installing...\n\n");
+	process.stderr.write(
+		"\nPeep Proxy CA is not trusted. Type your user password to install it.\n\n",
+	);
 	const ok = trustCa(certPath);
 	if (!ok) {
 		process.stderr.write(
