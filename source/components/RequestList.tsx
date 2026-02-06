@@ -16,6 +16,8 @@ type Props = {
 		size: number;
 		url: number;
 	};
+	height: number;
+	isActive: boolean;
 };
 
 const COLUMN_LABELS: Record<SortColumn, string> = {
@@ -46,12 +48,14 @@ export function RequestList({
 	viewportHeight,
 	sortConfig,
 	columnWidths,
+	height,
+	isActive,
 }: Props) {
 	if (entries.length === 0) {
 		return (
 			<Box
 				flexDirection="column"
-				flexGrow={1}
+				height={height}
 				justifyContent="center"
 				alignItems="center"
 			>
@@ -63,8 +67,8 @@ export function RequestList({
 	const visible = entries.slice(scrollOffset, scrollOffset + viewportHeight);
 
 	return (
-		<Box flexDirection="column" flexGrow={1}>
-			<Text bold dimColor>
+		<Box flexDirection="column" height={height}>
+			<Text bold dimColor={!isActive}>
 				<Text> </Text>
 				<Text>
 					{headerLabel(

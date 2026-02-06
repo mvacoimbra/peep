@@ -1,7 +1,9 @@
 import { Box, useApp, useInput } from "ink";
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { RequestList } from "./components/RequestList.js";
 import { StatusBar } from "./components/StatusBar.js";
+import { useActivePanel } from "./hooks/useActivePanel.js";
+import type { Panel } from "./hooks/useActivePanel.js";
 import { useListNavigation } from "./hooks/useListNavigation.js";
 import { useSorting } from "./hooks/useSorting.js";
 import { useTerminalDimensions } from "./hooks/useTerminalDimensions.js";
@@ -18,27 +20,44 @@ const COL_STATUS = 6;
 const COL_DURATION = 8;
 const COL_SIZE = 7;
 const COL_PADDING = 10; // leading space + 4 separators (1 each) + trailing
-const HEADER_LINES = 3; // header row + separator + status bar
+const STATUS_BAR_HEIGHT = 1;
+const LIST_HEADER_LINES = 2; // header row + separator
 
 export default function App({ store, port }: Props) {
 	const { exit } = useApp();
 	const entries = useTrafficEntries(store);
 	const { columns, rows } = useTerminalDimensions();
 
+	const activePanelRef = useRef<Panel>("list");
+
 	const { sortedEntries, sortConfig, awaitingColumn } = useSorting({
 		entries,
+		isActive: activePanelRef.current === "list",
 	});
+
+	const hasEntries = sortedEntries.length > 0;
+
+	const { activePanel } = useActivePanel({
+		hasSelection: hasEntries,
+		awaitingColumn,
+	});
+	activePanelRef.current = activePanel;
+
+	const available = Math.max(1, rows - STATUS_BAR_HEIGHT);
+	const listHeight = hasEntries
+		? Math.max(LIST_HEADER_LINES + 1, Math.floor(available * 0.4))
+		: available;
+	const listViewportHeight = Math.max(1, listHeight - LIST_HEADER_LINES);
 
 	const colUrl = Math.max(
 		10,
 		columns - COL_METHOD - COL_STATUS - COL_DURATION - COL_SIZE - COL_PADDING,
 	);
-	const viewportHeight = Math.max(1, rows - HEADER_LINES);
 
 	const { selectedIndex, scrollOffset } = useListNavigation({
 		itemCount: sortedEntries.length,
-		viewportHeight,
-		isActive: !awaitingColumn,
+		viewportHeight: listViewportHeight,
+		isActive: activePanel === "list" && !awaitingColumn,
 	});
 
 	useInput(
@@ -67,15 +86,18 @@ export default function App({ store, port }: Props) {
 				entries={sortedEntries}
 				selectedIndex={selectedIndex}
 				scrollOffset={scrollOffset}
-				viewportHeight={viewportHeight}
+				viewportHeight={listViewportHeight}
 				sortConfig={sortConfig}
 				columnWidths={columnWidths}
+				height={listHeight}
+				isActive={activePanel === "list"}
 			/>
 			<StatusBar
 				port={port}
 				requestCount={sortedEntries.length}
 				selectedIndex={selectedIndex}
 				columns={columns}
+				activePanel={activePanel}
 			/>
 		</Box>
 	);
