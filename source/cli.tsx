@@ -5,6 +5,7 @@ import { render } from "ink";
 import meow from "meow";
 import { isCaTrusted, trustCa } from "./proxy/cert-trust.js";
 import { loadOrCreateCA, ProxyServer } from "./proxy/index.js";
+import { disableSystemProxy, enableSystemProxy } from "./proxy/system-proxy.js";
 import { TrafficStore } from "./store/index.js";
 import App from "./app.js";
 
@@ -53,9 +54,25 @@ const store = new TrafficStore(proxy);
 
 await proxy.start();
 
+const proxyService = enableSystemProxy(port);
+
+function cleanup() {
+	if (proxyService) disableSystemProxy(proxyService);
+}
+
+process.on("SIGINT", () => {
+	cleanup();
+	process.exit(0);
+});
+process.on("SIGTERM", () => {
+	cleanup();
+	process.exit(0);
+});
+
 const { waitUntilExit } = render(<App store={store} port={port} />);
 
 await waitUntilExit();
 
+cleanup();
 store.destroy();
 await proxy.stop();
