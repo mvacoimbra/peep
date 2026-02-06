@@ -1,4 +1,5 @@
 import { Box, Text } from "ink";
+import type { SortColumn, SortConfig } from "../hooks/useSorting.js";
 import type { TrafficEntry } from "../store/index.js";
 import { RequestRow } from "./RequestRow.js";
 
@@ -7,19 +8,43 @@ type Props = {
 	selectedIndex: number;
 	scrollOffset: number;
 	viewportHeight: number;
+	sortConfig: SortConfig | null;
 	columnWidths: {
 		method: number;
 		status: number;
 		duration: number;
+		size: number;
 		url: number;
 	};
 };
+
+const COLUMN_LABELS: Record<SortColumn, string> = {
+	method: "Method",
+	url: "URL",
+	status: "Status",
+	duration: "Time",
+	size: "Size",
+};
+
+function headerLabel(
+	label: string,
+	column: SortColumn,
+	sortConfig: SortConfig | null,
+	width: number,
+): string {
+	if (sortConfig?.column === column) {
+		const arrow = sortConfig.direction === "asc" ? "▲" : "▼";
+		return `${label}${arrow}`.slice(0, width).padEnd(width);
+	}
+	return label.padEnd(width);
+}
 
 export function RequestList({
 	entries,
 	selectedIndex,
 	scrollOffset,
 	viewportHeight,
+	sortConfig,
 	columnWidths,
 }: Props) {
 	if (entries.length === 0) {
@@ -41,13 +66,45 @@ export function RequestList({
 		<Box flexDirection="column" flexGrow={1}>
 			<Text bold dimColor>
 				<Text> </Text>
-				<Text>{"Method".padEnd(columnWidths.method)}</Text>
+				<Text>
+					{headerLabel(
+						COLUMN_LABELS.method,
+						"method",
+						sortConfig,
+						columnWidths.method,
+					)}
+				</Text>
 				<Text> </Text>
-				<Text>{"URL".padEnd(columnWidths.url)}</Text>
+				<Text>
+					{headerLabel(COLUMN_LABELS.url, "url", sortConfig, columnWidths.url)}
+				</Text>
 				<Text> </Text>
-				<Text>{"Status".padEnd(columnWidths.status)}</Text>
+				<Text>
+					{headerLabel(
+						COLUMN_LABELS.status,
+						"status",
+						sortConfig,
+						columnWidths.status,
+					)}
+				</Text>
 				<Text> </Text>
-				<Text>{"Time".padEnd(columnWidths.duration)}</Text>
+				<Text>
+					{headerLabel(
+						COLUMN_LABELS.duration,
+						"duration",
+						sortConfig,
+						columnWidths.duration,
+					)}
+				</Text>
+				<Text> </Text>
+				<Text>
+					{headerLabel(
+						COLUMN_LABELS.size,
+						"size",
+						sortConfig,
+						columnWidths.size,
+					)}
+				</Text>
 			</Text>
 			<Text dimColor>
 				{"─".repeat(
@@ -55,7 +112,8 @@ export function RequestList({
 						columnWidths.url +
 						columnWidths.status +
 						columnWidths.duration +
-						7,
+						columnWidths.size +
+						9,
 				)}
 			</Text>
 			{visible.map((entry, i) => (

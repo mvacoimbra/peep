@@ -8,6 +8,7 @@ type Props = {
 		method: number;
 		status: number;
 		duration: number;
+		size: number;
 		url: number;
 	};
 };
@@ -51,6 +52,20 @@ function formatDuration(entry: TrafficEntry, width: number): string {
 	return text.slice(0, width).padEnd(width);
 }
 
+function formatSize(entry: TrafficEntry, width: number): string {
+	if (entry.state === "pending" || !entry.response) return "...".padEnd(width);
+	const bytes = entry.response.body.length;
+	let text: string;
+	if (bytes >= 1_000_000) {
+		text = `${(bytes / 1_000_000).toFixed(1)}M`;
+	} else if (bytes >= 1_000) {
+		text = `${(bytes / 1_000).toFixed(1)}K`;
+	} else {
+		text = `${bytes}B`;
+	}
+	return text.slice(0, width).padEnd(width);
+}
+
 function truncate(text: string, maxLen: number): string {
 	if (text.length <= maxLen) return text.padEnd(maxLen);
 	return `${text.slice(0, maxLen - 1)}…`;
@@ -61,6 +76,7 @@ export function RequestRow({ entry, isSelected, columnWidths }: Props) {
 	const url = truncate(entry.request.path, columnWidths.url);
 	const status = formatStatus(entry, columnWidths.status);
 	const duration = formatDuration(entry, columnWidths.duration);
+	const size = formatSize(entry, columnWidths.size);
 	const methodColor = METHOD_COLORS[entry.request.method] ?? "white";
 	const statusColor = getStatusColor(entry);
 
@@ -75,6 +91,8 @@ export function RequestRow({ entry, isSelected, columnWidths }: Props) {
 				<Text>{status}</Text>
 				<Text> </Text>
 				<Text>{duration}</Text>
+				<Text> </Text>
+				<Text>{size}</Text>
 			</Text>
 		);
 	}
@@ -91,6 +109,8 @@ export function RequestRow({ entry, isSelected, columnWidths }: Props) {
 			</Text>
 			<Text> </Text>
 			<Text dimColor={entry.state === "pending"}>{duration}</Text>
+			<Text> </Text>
+			<Text dimColor={entry.state === "pending"}>{size}</Text>
 		</Text>
 	);
 }

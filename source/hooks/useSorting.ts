@@ -1,0 +1,117 @@
+import { useInput } from "ink";
+import { useCallback, useMemo, useState } from "react";
+import type { TrafficEntry } from "../store/index.js";
+
+export type SortColumn = "method" | "url" | "status" | "duration" | "size";
+export type SortDirection = "asc" | "desc";
+export type SortConfig = { column: SortColumn; direction: SortDirection };
+
+type Options = {
+	entries: TrafficEntry[];
+	isActive?: boolean;
+};
+
+type Result = {
+	sortedEntries: TrafficEntry[];
+	sortConfig: SortConfig | null;
+	awaitingColumn: boolean;
+};
+
+const COLUMN_KEYS: Record<string, SortColumn> = {
+	m: "method",
+	u: "url",
+	s: "status",
+	d: "duration",
+	z: "size",
+};
+
+function getResponseSize(entry: TrafficEntry): number | null {
+	if (entry.state === "pending" || !entry.response) return null;
+	return entry.response.body.length;
+}
+
+function compareEntries(
+	a: TrafficEntry,
+	b: TrafficEntry,
+	column: SortColumn,
+): number {
+	switch (column) {
+		case "method":
+			return a.request.method.localeCompare(b.request.method);
+		case "url":
+			return a.request.path.localeCompare(b.request.path);
+		case "status": {
+			const aCode = a.response?.statusCode ?? Number.MAX_SAFE_INTEGER;
+			const bCode = b.response?.statusCode ?? Number.MAX_SAFE_INTEGER;
+			return aCode - bCode;
+		}
+		case "duration": {
+			const aDur = a.response?.duration ?? Number.MAX_SAFE_INTEGER;
+			const bDur = b.response?.duration ?? Number.MAX_SAFE_INTEGER;
+			return aDur - bDur;
+		}
+		case "size": {
+			const aSize = getResponseSize(a) ?? Number.MAX_SAFE_INTEGER;
+			const bSize = getResponseSize(b) ?? Number.MAX_SAFE_INTEGER;
+			return aSize - bSize;
+		}
+	}
+}
+
+export function useSorting({ entries, isActive = true }: Options): Result {
+	const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
+	const [awaitingColumn, setAwaitingColumn] = useState(false);
+
+	const handleReset = useCallback(() => {
+		setSortConfig(null);
+		setAwaitingColumn(false);
+	}, []);
+
+	useInput(
+		(input, key) => {
+			if (awaitingColumn) {
+				if (key.escape) {
+					setAwaitingColumn(false);
+					return;
+				}
+
+				const column = COLUMN_KEYS[input];
+				if (column) {
+					setSortConfig((prev) => {
+						if (prev?.column === column) {
+							return {
+								column,
+								direction: prev.direction === "asc" ? "desc" : "asc",
+							};
+						}
+						return { column, direction: "asc" };
+					});
+					setAwaitingColumn(false);
+				}
+				return;
+			}
+
+			// 's' enters sort mode
+			if (input === "s") {
+				setAwaitingColumn(true);
+				return;
+			}
+
+			// 'S' resets sort
+			if (input === "S") {
+				handleReset();
+			}
+		},
+		{ isActive },
+	);
+
+	const sortedEntries = useMemo(() => {
+		if (!sortConfig) return entries;
+		const multiplier = sortConfig.direction === "asc" ? 1 : -1;
+		return [...entries].sort(
+			(a, b) => multiplier * compareEntries(a, b, sortConfig.column),
+		);
+	}, [entries, sortConfig]);
+
+	return { sortedEntries, sortConfig, awaitingColumn };
+}
