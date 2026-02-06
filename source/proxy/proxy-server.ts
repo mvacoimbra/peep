@@ -60,6 +60,7 @@ export class ProxyServer {
 					resolve();
 				}
 			});
+			this.#server.closeAllConnections();
 		});
 	}
 
