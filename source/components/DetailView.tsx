@@ -167,7 +167,9 @@ export function DetailView({
 				{TABS.map((tab, i) => {
 					const label = TAB_LABELS[tab];
 					const sep = i < TABS.length - 1 ? " │ " : "";
-					if (tab === activeTab) {
+					const isCurrent = tab === activeTab;
+
+					if (isCurrent && isActive) {
 						return (
 							<Text key={tab}>
 								<Text bold color={PRIMARY_COLOR}>
@@ -178,7 +180,7 @@ export function DetailView({
 						);
 					}
 					return (
-						<Text key={tab} dimColor>
+						<Text key={tab} dimColor={!isActive}>
 							{` ${label} `}
 							{sep}
 						</Text>
