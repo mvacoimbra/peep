@@ -119,7 +119,9 @@ export default function App({ store, port }: Props) {
 			(input: string, key: { return: boolean }) => {
 				if (input === "q") {
 					exit();
+					return;
 				}
+				if (awaitingColumn) return;
 				if (activePanel === "sidebar") {
 					if (key.return) {
 						setActivePanel("list");
@@ -130,9 +132,15 @@ export default function App({ store, port }: Props) {
 					}
 				}
 			},
-			[exit, activePanel, expandAtIndex, collapseAtIndex, setActivePanel],
+			[
+				exit,
+				awaitingColumn,
+				activePanel,
+				expandAtIndex,
+				collapseAtIndex,
+				setActivePanel,
+			],
 		),
-		{ isActive: !awaitingColumn },
 	);
 
 	const columnWidths = {
