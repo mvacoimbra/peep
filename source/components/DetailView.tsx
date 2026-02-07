@@ -1,5 +1,6 @@
 import cliTruncate from "cli-truncate";
-import { Text } from "ink";
+import { Box, Text } from "ink";
+import Spinner from "ink-spinner";
 import type { IncomingHttpHeaders } from "node:http";
 import { useDetailScroll } from "../hooks/useDetailScroll.js";
 import type { DetailTab } from "../hooks/useDetailTabs.js";
@@ -187,11 +188,20 @@ export function DetailView({
 					);
 				})}
 			</Text>
-			{visibleLines.map((line, i) => (
-				<Text key={`${scrollOffset + i}`} dimColor={!isActive}>
-					{` ${truncateLine(line, innerWidth - 1)}`}
-				</Text>
-			))}
+			{side === "response" && entry.state === "pending" ? (
+				<Box paddingLeft={1} paddingTop={1}>
+					<Text dimColor={!isActive}>
+						<Spinner />
+						<Text> Waiting for response…</Text>
+					</Text>
+				</Box>
+			) : (
+				visibleLines.map((line, i) => (
+					<Text key={`${scrollOffset + i}`} dimColor={!isActive}>
+						{` ${truncateLine(line, innerWidth - 1)}`}
+					</Text>
+				))
+			)}
 		</BorderedBox>
 	);
 }
