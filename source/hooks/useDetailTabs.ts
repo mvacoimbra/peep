@@ -13,11 +13,7 @@ type Result = {
 	responseTab: DetailTab;
 };
 
-const TAB_KEYS: Record<string, DetailTab> = {
-	"1": "headers",
-	"2": "body",
-	"3": "raw",
-};
+const TABS: DetailTab[] = ["headers", "body", "raw"];
 
 export function useDetailTabs({ activePanel }: Options): Result {
 	const [requestTab, setRequestTab] = useState<DetailTab>("headers");
@@ -25,13 +21,16 @@ export function useDetailTabs({ activePanel }: Options): Result {
 
 	useInput(
 		(input) => {
-			const tab = TAB_KEYS[input];
-			if (!tab) return;
+			const setter = activePanel === "request" ? setRequestTab : setResponseTab;
+			const current = activePanel === "request" ? requestTab : responseTab;
+			const idx = TABS.indexOf(current);
 
-			if (activePanel === "request") {
-				setRequestTab(tab);
-			} else if (activePanel === "response") {
-				setResponseTab(tab);
+			if (input === "l") {
+				const next = TABS[idx + 1];
+				if (next) setter(next);
+			} else if (input === "h") {
+				const prev = TABS[idx - 1];
+				if (prev) setter(prev);
 			}
 		},
 		{ isActive: activePanel === "request" || activePanel === "response" },

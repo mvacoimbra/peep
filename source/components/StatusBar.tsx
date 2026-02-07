@@ -11,9 +11,9 @@ type Props = {
 
 const HINTS: Record<Panel, string> = {
 	sidebar: "j/k:scroll  h/l:group  Enter:select  q:quit",
-	list: "j/k:scroll  l:detail  Esc:sidebar  s:sort  q:quit",
-	request: "j/k:scroll  h/l:panel  1/2/3:tab  Esc:sidebar  q:quit",
-	response: "j/k:scroll  h/l:panel  1/2/3:tab  Esc:sidebar  q:quit",
+	list: "j/k:scroll  Enter:detail  Esc:sidebar  s:sort  q:quit",
+	request: "j/k:scroll  h/l:tab  Tab:response  Esc:list  q:quit",
+	response: "j/k:scroll  h/l:tab  Tab:request  Esc:list  q:quit",
 };
 
 export function StatusBar({

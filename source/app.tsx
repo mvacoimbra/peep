@@ -130,6 +130,10 @@ export default function App({ store, port }: Props) {
 					} else if (input === "h") {
 						collapseAtIndex(sidebarSelectedRef.current);
 					}
+				} else if (activePanel === "list") {
+					if (key.return && hasSelectionRef.current) {
+						setActivePanel("request");
+					}
 				}
 			},
 			[
