@@ -1,26 +1,57 @@
 import { useInput } from "ink";
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { TrafficEntry } from "../store/index.js";
+import { copyToClipboard } from "../utils/copyToClipboard.js";
+import { getTabText } from "../utils/getTabText.js";
 import type { Panel } from "./useActivePanel.js";
 
 export type DetailTab = "headers" | "body" | "raw";
 
 type Options = {
 	activePanel: Panel;
+	selectedEntry?: TrafficEntry;
 };
 
 type Result = {
 	requestTab: DetailTab;
 	responseTab: DetailTab;
+	notification: string;
 };
 
 const TABS: DetailTab[] = ["headers", "body", "raw"];
 
-export function useDetailTabs({ activePanel }: Options): Result {
+export function useDetailTabs({ activePanel, selectedEntry }: Options): Result {
 	const [requestTab, setRequestTab] = useState<DetailTab>("headers");
 	const [responseTab, setResponseTab] = useState<DetailTab>("headers");
+	const [notification, setNotification] = useState("");
+	const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+	const clearNotification = useCallback(() => {
+		setNotification("");
+	}, []);
+
+	useEffect(() => {
+		return () => {
+			if (timerRef.current) clearTimeout(timerRef.current);
+		};
+	}, []);
 
 	useInput(
 		(input) => {
+			const isDetail = activePanel === "request" || activePanel === "response";
+			if (!isDetail) return;
+
+			if (input === "y" && selectedEntry) {
+				const side = activePanel as "request" | "response";
+				const tab = side === "request" ? requestTab : responseTab;
+				const text = getTabText(selectedEntry, side, tab);
+				copyToClipboard(text);
+				setNotification("Copied!");
+				if (timerRef.current) clearTimeout(timerRef.current);
+				timerRef.current = setTimeout(clearNotification, 2000);
+				return;
+			}
+
 			const setter = activePanel === "request" ? setRequestTab : setResponseTab;
 			const current = activePanel === "request" ? requestTab : responseTab;
 			const idx = TABS.indexOf(current);
@@ -36,5 +67,5 @@ export function useDetailTabs({ activePanel }: Options): Result {
 		{ isActive: activePanel === "request" || activePanel === "response" },
 	);
 
-	return { requestTab, responseTab };
+	return { requestTab, responseTab, notification };
 }

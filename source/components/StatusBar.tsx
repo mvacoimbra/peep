@@ -7,13 +7,14 @@ type Props = {
 	selectedIndex: number;
 	columns: number;
 	activePanel: Panel;
+	notification?: string;
 };
 
 const HINTS: Record<Panel, string> = {
 	sidebar: "j/k:scroll  h/l:group  Enter:select  q:quit",
 	list: "j/k:scroll  Enter:detail  Esc:sidebar  s:sort  q:quit",
-	request: "j/k:scroll  h/l:tab  Tab:response  Esc:list  q:quit",
-	response: "j/k:scroll  h/l:tab  Tab:request  Esc:list  q:quit",
+	request: "j/k:scroll  h/l:tab  y:copy  Tab:response  Esc:list  q:quit",
+	response: "j/k:scroll  h/l:tab  y:copy  Tab:request  Esc:list  q:quit",
 };
 
 export function StatusBar({
@@ -22,10 +23,15 @@ export function StatusBar({
 	selectedIndex,
 	columns,
 	activePanel,
+	notification,
 }: Props) {
-	const left = `Proxy :${port} | ${requestCount} request${requestCount !== 1 ? "s" : ""}`;
+	const left = notification
+		? `✓ ${notification}`
+		: `Proxy :${port} | ${requestCount} request${requestCount !== 1 ? "s" : ""}`;
 	const position =
-		requestCount > 0 ? ` [${selectedIndex + 1}/${requestCount}]` : "";
+		!notification && requestCount > 0
+			? ` [${selectedIndex + 1}/${requestCount}]`
+			: "";
 	const right = HINTS[activePanel];
 	const leftFull = left + position;
 	const content = ` ${leftFull}${" ".repeat(Math.max(1, columns - leftFull.length - right.length - 2))}${right} `;

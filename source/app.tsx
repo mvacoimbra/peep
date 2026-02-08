@@ -90,8 +90,6 @@ export default function App({ store, port }: Props) {
 	hasSelectionRef.current = hasEntries;
 	awaitingColumnRef.current = awaitingColumn;
 
-	const { requestTab, responseTab } = useDetailTabs({ activePanel });
-
 	const listHeight = hasEntries
 		? Math.max(LIST_CHROME_LINES + 1, Math.floor(available * 0.4))
 		: available;
@@ -112,6 +110,11 @@ export default function App({ store, port }: Props) {
 		itemCount: sortedEntries.length,
 		viewportHeight: listViewportHeight,
 		isActive: activePanel === "list" && !awaitingColumn,
+	});
+
+	const { requestTab, responseTab, notification } = useDetailTabs({
+		activePanel,
+		selectedEntry: sortedEntries[selectedIndex],
 	});
 
 	useInput(
@@ -199,6 +202,7 @@ export default function App({ store, port }: Props) {
 				selectedIndex={selectedIndex}
 				columns={columns}
 				activePanel={activePanel}
+				notification={notification}
 			/>
 		</Box>
 	);
