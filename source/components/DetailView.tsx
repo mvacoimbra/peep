@@ -1,6 +1,5 @@
 import cliTruncate from "cli-truncate";
 import { Box, Text } from "ink";
-import Spinner from "ink-spinner";
 import type { IncomingHttpHeaders } from "node:http";
 import { useDetailScroll } from "../hooks/useDetailScroll.js";
 import type { DetailTab } from "../hooks/useDetailTabs.js";
@@ -16,6 +15,7 @@ import { decompressBody } from "../utils/decompress.js";
 import { formatBytes } from "../utils/formatBytes.js";
 import { highlightBody } from "../utils/highlightBody.js";
 import { BorderedBox } from "./BorderedBox.js";
+import { Spinner } from "./SpinnerContext.js";
 
 type Props = {
 	entry: TrafficEntry;

@@ -3,6 +3,7 @@ import { useCallback, useMemo, useRef } from "react";
 import { DetailPanel } from "./components/DetailPanel.js";
 import { DomainSidebar } from "./components/DomainSidebar.js";
 import { RequestList } from "./components/RequestList.js";
+import { SpinnerProvider } from "./components/SpinnerContext.js";
 import { StatusBar } from "./components/StatusBar.js";
 import { useActivePanel } from "./hooks/useActivePanel.js";
 import { useDetailTabs } from "./hooks/useDetailTabs.js";
@@ -161,49 +162,51 @@ export default function App({ store, port }: Props) {
 	const selectedEntry = sortedEntries[selectedIndex];
 
 	return (
-		<Box flexDirection="column" height={rows}>
-			<Box flexDirection="row" height={available}>
-				<DomainSidebar
-					items={visibleItems}
-					selectedIndex={sidebarSelectedIndex}
-					scrollOffset={sidebarScrollOffset}
-					viewportHeight={sidebarViewportHeight}
-					width={SIDEBAR_WIDTH}
-					height={available}
-					isActive={activePanel === "sidebar"}
-				/>
-				<Box flexDirection="column" width={contentWidth}>
-					<RequestList
-						entries={sortedEntries}
-						selectedIndex={selectedIndex}
-						scrollOffset={scrollOffset}
-						viewportHeight={listViewportHeight}
-						sortConfig={sortConfig}
-						columnWidths={columnWidths}
-						width={contentWidth}
-						height={listHeight}
-						isActive={activePanel === "list"}
+		<SpinnerProvider>
+			<Box flexDirection="column" height={rows}>
+				<Box flexDirection="row" height={available}>
+					<DomainSidebar
+						items={visibleItems}
+						selectedIndex={sidebarSelectedIndex}
+						scrollOffset={sidebarScrollOffset}
+						viewportHeight={sidebarViewportHeight}
+						width={SIDEBAR_WIDTH}
+						height={available}
+						isActive={activePanel === "sidebar"}
 					/>
-					{selectedEntry && detailHeight > 0 && (
-						<DetailPanel
-							entry={selectedEntry}
-							activePanel={activePanel}
-							requestTab={requestTab}
-							responseTab={responseTab}
+					<Box flexDirection="column" width={contentWidth}>
+						<RequestList
+							entries={sortedEntries}
+							selectedIndex={selectedIndex}
+							scrollOffset={scrollOffset}
+							viewportHeight={listViewportHeight}
+							sortConfig={sortConfig}
+							columnWidths={columnWidths}
 							width={contentWidth}
-							height={detailHeight}
+							height={listHeight}
+							isActive={activePanel === "list"}
 						/>
-					)}
+						{selectedEntry && detailHeight > 0 && (
+							<DetailPanel
+								entry={selectedEntry}
+								activePanel={activePanel}
+								requestTab={requestTab}
+								responseTab={responseTab}
+								width={contentWidth}
+								height={detailHeight}
+							/>
+						)}
+					</Box>
 				</Box>
+				<StatusBar
+					port={port}
+					requestCount={sortedEntries.length}
+					selectedIndex={selectedIndex}
+					columns={columns}
+					activePanel={activePanel}
+					notification={notification}
+				/>
 			</Box>
-			<StatusBar
-				port={port}
-				requestCount={sortedEntries.length}
-				selectedIndex={selectedIndex}
-				columns={columns}
-				activePanel={activePanel}
-				notification={notification}
-			/>
-		</Box>
+		</SpinnerProvider>
 	);
 }

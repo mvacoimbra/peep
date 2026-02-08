@@ -1,7 +1,7 @@
 import { Text } from "ink";
-import Spinner from "ink-spinner";
 import type { TrafficEntry } from "../store/index.js";
 import { PRIMARY_COLOR } from "../theme.js";
+import { Spinner } from "./SpinnerContext.js";
 
 type Props = {
 	entry: TrafficEntry;
