@@ -133,3 +133,4 @@ const { waitUntilExit } = render(
 );
 
 await waitUntilExit();
+process.exit(0);
