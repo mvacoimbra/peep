@@ -116,56 +116,65 @@ export class ProxyServer {
 			return;
 		}
 
-		const requestEvent: ProxyRequestEvent = {
-			id,
-			method: clientReq.method ?? "GET",
-			url: clientReq.url ?? "",
-			host: parsed.hostname,
-			path: parsed.pathname + parsed.search,
-			headers: clientReq.headers,
-			timestamp,
-		};
-		this.#emitter.emit("request", requestEvent);
+		const reqChunks: Buffer[] = [];
+		clientReq.on("data", (chunk: Buffer) => {
+			reqChunks.push(chunk);
+		});
+		clientReq.on("end", () => {
+			const reqBody = Buffer.concat(reqChunks);
 
-		const upstreamOptions: http.RequestOptions = {
-			hostname: parsed.hostname,
-			port: parsed.port || 80,
-			path: parsed.pathname + parsed.search,
-			method: clientReq.method,
-			headers: clientReq.headers,
-		};
+			const requestEvent: ProxyRequestEvent = {
+				id,
+				method: clientReq.method ?? "GET",
+				url: clientReq.url ?? "",
+				host: parsed.hostname,
+				path: parsed.pathname + parsed.search,
+				headers: clientReq.headers,
+				body: reqBody,
+				timestamp,
+			};
+			this.#emitter.emit("request", requestEvent);
 
-		const upstreamReq = http.request(upstreamOptions, (upstreamRes) => {
-			const chunks: Buffer[] = [];
+			const upstreamOptions: http.RequestOptions = {
+				hostname: parsed.hostname,
+				port: parsed.port || 80,
+				path: parsed.pathname + parsed.search,
+				method: clientReq.method,
+				headers: clientReq.headers,
+			};
 
-			upstreamRes.on("data", (chunk: Buffer) => {
-				chunks.push(chunk);
-			});
+			const upstreamReq = http.request(upstreamOptions, (upstreamRes) => {
+				const chunks: Buffer[] = [];
 
-			upstreamRes.on("end", () => {
-				const body = Buffer.concat(chunks);
-				this.#emitter.emit("response", {
-					id,
-					statusCode: upstreamRes.statusCode ?? 0,
-					headers: upstreamRes.headers,
-					body,
-					duration: Date.now() - timestamp,
+				upstreamRes.on("data", (chunk: Buffer) => {
+					chunks.push(chunk);
 				});
+
+				upstreamRes.on("end", () => {
+					const body = Buffer.concat(chunks);
+					this.#emitter.emit("response", {
+						id,
+						statusCode: upstreamRes.statusCode ?? 0,
+						headers: upstreamRes.headers,
+						body,
+						duration: Date.now() - timestamp,
+					});
+				});
+
+				clientRes.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
+				upstreamRes.pipe(clientRes);
 			});
 
-			clientRes.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers);
-			upstreamRes.pipe(clientRes);
-		});
+			upstreamReq.on("error", (error) => {
+				this.#emitter.emit("error", { id, error, phase: "request" });
+				if (!clientRes.headersSent) {
+					clientRes.writeHead(502, { "Content-Type": "text/plain" });
+				}
+				clientRes.end("Bad Gateway");
+			});
 
-		upstreamReq.on("error", (error) => {
-			this.#emitter.emit("error", { id, error, phase: "request" });
-			if (!clientRes.headersSent) {
-				clientRes.writeHead(502, { "Content-Type": "text/plain" });
-			}
-			clientRes.end("Bad Gateway");
+			upstreamReq.end(reqBody);
 		});
-
-		clientReq.pipe(upstreamReq);
 	};
 
 	#handleConnect = (
@@ -256,59 +265,68 @@ export class ProxyServer {
 				const url = `https://${host}${clientReq.url ?? "/"}`;
 				const pathAndSearch = clientReq.url ?? "/";
 
-				const requestEvent: ProxyRequestEvent = {
-					id,
-					method: clientReq.method ?? "GET",
-					url,
-					host,
-					path: pathAndSearch,
-					headers: clientReq.headers,
-					timestamp,
-				};
-				this.#emitter.emit("request", requestEvent);
+				const reqChunks: Buffer[] = [];
+				clientReq.on("data", (chunk: Buffer) => {
+					reqChunks.push(chunk);
+				});
+				clientReq.on("end", () => {
+					const reqBody = Buffer.concat(reqChunks);
 
-				const upstreamOptions: https.RequestOptions = {
-					hostname: host,
-					port,
-					path: pathAndSearch,
-					method: clientReq.method,
-					headers: { ...clientReq.headers, host },
-				};
+					const requestEvent: ProxyRequestEvent = {
+						id,
+						method: clientReq.method ?? "GET",
+						url,
+						host,
+						path: pathAndSearch,
+						headers: clientReq.headers,
+						body: reqBody,
+						timestamp,
+					};
+					this.#emitter.emit("request", requestEvent);
 
-				const upstreamReq = https.request(upstreamOptions, (upstreamRes) => {
-					const chunks: Buffer[] = [];
+					const upstreamOptions: https.RequestOptions = {
+						hostname: host,
+						port,
+						path: pathAndSearch,
+						method: clientReq.method,
+						headers: { ...clientReq.headers, host },
+					};
 
-					upstreamRes.on("data", (chunk: Buffer) => {
-						chunks.push(chunk);
-					});
+					const upstreamReq = https.request(upstreamOptions, (upstreamRes) => {
+						const chunks: Buffer[] = [];
 
-					upstreamRes.on("end", () => {
-						const body = Buffer.concat(chunks);
-						this.#emitter.emit("response", {
-							id,
-							statusCode: upstreamRes.statusCode ?? 0,
-							headers: upstreamRes.headers,
-							body,
-							duration: Date.now() - timestamp,
+						upstreamRes.on("data", (chunk: Buffer) => {
+							chunks.push(chunk);
 						});
+
+						upstreamRes.on("end", () => {
+							const body = Buffer.concat(chunks);
+							this.#emitter.emit("response", {
+								id,
+								statusCode: upstreamRes.statusCode ?? 0,
+								headers: upstreamRes.headers,
+								body,
+								duration: Date.now() - timestamp,
+							});
+						});
+
+						clientRes.writeHead(
+							upstreamRes.statusCode ?? 502,
+							upstreamRes.headers,
+						);
+						upstreamRes.pipe(clientRes);
 					});
 
-					clientRes.writeHead(
-						upstreamRes.statusCode ?? 502,
-						upstreamRes.headers,
-					);
-					upstreamRes.pipe(clientRes);
-				});
+					upstreamReq.on("error", (error) => {
+						this.#emitter.emit("error", { id, error, phase: "request" });
+						if (!clientRes.headersSent) {
+							clientRes.writeHead(502, { "Content-Type": "text/plain" });
+						}
+						clientRes.end("Bad Gateway");
+					});
 
-				upstreamReq.on("error", (error) => {
-					this.#emitter.emit("error", { id, error, phase: "request" });
-					if (!clientRes.headersSent) {
-						clientRes.writeHead(502, { "Content-Type": "text/plain" });
-					}
-					clientRes.end("Bad Gateway");
+					upstreamReq.end(reqBody);
 				});
-
-				clientReq.pipe(upstreamReq);
 			},
 		);
 

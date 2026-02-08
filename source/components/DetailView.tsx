@@ -42,8 +42,20 @@ function formatHeaders(headers: IncomingHttpHeaders): string[] {
 	});
 }
 
-function getRequestBodyLines(_entry: TrafficEntry): string[] {
-	return ["Body not captured"];
+function getRequestBodyLines(entry: TrafficEntry): string[] {
+	if (entry.request.body.length === 0) {
+		return ["Empty body"];
+	}
+	const body = decompressBody(entry.request.body, entry.request.headers);
+	const mime = parseContentType(entry.request.headers);
+	if (isBinary(mime, body)) {
+		const label = mime || "unknown";
+		const size = formatBytes(entry.request.body.length);
+		return [`[Binary content: ${label}, ${size}]`];
+	}
+	const text = body.toString("utf-8");
+	const language = getHighlightLanguage(mime);
+	return highlightBody(text, language).split("\n");
 }
 
 function getDecompressedBody(entry: TrafficEntry): Buffer {
@@ -76,9 +88,21 @@ function getResponseBodyLines(entry: TrafficEntry): string[] {
 }
 
 function formatRawRequest(entry: TrafficEntry): string[] {
-	const { method, path, headers } = entry.request;
+	const { method, path, headers, body } = entry.request;
 	const lines: string[] = [`${method} ${path} HTTP/1.1`];
 	lines.push(...formatHeaders(headers));
+	if (body.length > 0) {
+		lines.push("");
+		const decompressed = decompressBody(body, headers);
+		const mime = parseContentType(headers);
+		if (isBinary(mime, decompressed)) {
+			const label = mime || "unknown";
+			const size = formatBytes(body.length);
+			lines.push(`[Binary content: ${label}, ${size}]`);
+		} else {
+			lines.push(...decompressed.toString("utf-8").split("\n"));
+		}
+	}
 	return lines;
 }
 

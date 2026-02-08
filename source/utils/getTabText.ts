@@ -20,6 +20,20 @@ function formatHeaders(headers: IncomingHttpHeaders): string {
 		.join("\n");
 }
 
+function getRequestBodyText(entry: TrafficEntry): string {
+	if (entry.request.body.length === 0) {
+		return "Empty body";
+	}
+	const body = decompressBody(entry.request.body, entry.request.headers);
+	const mime = parseContentType(entry.request.headers);
+	if (isBinaryContentType(mime) || hasBinaryBytes(body)) {
+		const label = mime || "unknown";
+		const size = formatBytes(entry.request.body.length);
+		return `[Binary content: ${label}, ${size}]`;
+	}
+	return body.toString("utf-8");
+}
+
 function getResponseBodyText(entry: TrafficEntry): string {
 	if (entry.state === "pending" || !entry.response) {
 		return "Waiting for response...";
@@ -38,8 +52,20 @@ function getResponseBodyText(entry: TrafficEntry): string {
 }
 
 function getRawRequest(entry: TrafficEntry): string {
-	const { method, path, headers } = entry.request;
+	const { method, path, headers, body } = entry.request;
 	const lines = [`${method} ${path} HTTP/1.1`, formatHeaders(headers)];
+	if (body.length > 0) {
+		lines.push("");
+		const decompressed = decompressBody(body, headers);
+		const mime = parseContentType(headers);
+		if (isBinaryContentType(mime) || hasBinaryBytes(decompressed)) {
+			const label = mime || "unknown";
+			const size = formatBytes(body.length);
+			lines.push(`[Binary content: ${label}, ${size}]`);
+		} else {
+			lines.push(decompressed.toString("utf-8"));
+		}
+	}
 	return lines.join("\n");
 }
 
@@ -76,7 +102,7 @@ export function getTabText(
 		return formatHeaders(headers);
 	}
 	if (tab === "body") {
-		if (side === "request") return "Body not captured";
+		if (side === "request") return getRequestBodyText(entry);
 		return getResponseBodyText(entry);
 	}
 	// raw

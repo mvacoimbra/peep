@@ -20,6 +20,7 @@ export type ProxyRequestEvent = {
 	host: string;
 	path: string;
 	headers: IncomingHttpHeaders;
+	body: Buffer;
 	timestamp: number;
 };
 
