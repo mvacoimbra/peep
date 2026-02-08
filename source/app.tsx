@@ -3,8 +3,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DetailPanel } from "./components/DetailPanel.js";
 import { DomainSidebar } from "./components/DomainSidebar.js";
 import { RequestList } from "./components/RequestList.js";
-import { SpinnerProvider } from "./components/SpinnerContext.js";
-import { Spinner } from "./components/SpinnerContext.js";
 import { StatusBar } from "./components/StatusBar.js";
 import { useActivePanel } from "./hooks/useActivePanel.js";
 import { useDetailTabs } from "./hooks/useDetailTabs.js";
@@ -15,10 +13,12 @@ import { useTerminalDimensions } from "./hooks/useTerminalDimensions.js";
 import { useTrafficEntries } from "./hooks/useTrafficEntries.js";
 import type { TrafficStore } from "./store/index.js";
 
+export type QuitStep = (message: string) => void;
+
 type Props = {
 	store: TrafficStore;
 	port: number;
-	onQuit: () => Promise<void>;
+	onQuit: (step: QuitStep) => Promise<void>;
 };
 
 const COL_METHOD = 7;
@@ -34,13 +34,17 @@ const SIDEBAR_WIDTH = 22;
 export default function App({ store, port, onQuit }: Props) {
 	const { exit } = useApp();
 	const [quitting, setQuitting] = useState(false);
+	const [quitSteps, setQuitSteps] = useState<string[]>([]);
 	const entries = useTrafficEntries(store);
 	const { columns, rows } = useTerminalDimensions();
 
 	useEffect(() => {
 		if (!quitting) return;
 		let cancelled = false;
-		onQuit().finally(() => {
+		const step: QuitStep = (message) => {
+			if (!cancelled) setQuitSteps((prev) => [...prev, message]);
+		};
+		onQuit(step).finally(() => {
 			if (!cancelled) exit();
 		});
 		return () => {
@@ -176,68 +180,62 @@ export default function App({ store, port, onQuit }: Props) {
 
 	if (quitting) {
 		return (
-			<SpinnerProvider>
-				<Box
-					flexDirection="column"
-					height={rows}
-					justifyContent="center"
-					alignItems="center"
-				>
-					<Text>
-						<Spinner />
-						<Text> Shutting down…</Text>
+			<Box flexDirection="column" height={rows} paddingTop={1} paddingLeft={2}>
+				<Text bold>Shutting down…</Text>
+				{quitSteps.map((msg) => (
+					<Text key={msg} dimColor>
+						{" "}
+						{msg}
 					</Text>
-				</Box>
-			</SpinnerProvider>
+				))}
+			</Box>
 		);
 	}
 
 	return (
-		<SpinnerProvider>
-			<Box flexDirection="column" height={rows}>
-				<Box flexDirection="row" height={available}>
-					<DomainSidebar
-						items={visibleItems}
-						selectedIndex={sidebarSelectedIndex}
-						scrollOffset={sidebarScrollOffset}
-						viewportHeight={sidebarViewportHeight}
-						width={SIDEBAR_WIDTH}
-						height={available}
-						isActive={activePanel === "sidebar"}
-					/>
-					<Box flexDirection="column" width={contentWidth}>
-						<RequestList
-							entries={sortedEntries}
-							selectedIndex={selectedIndex}
-							scrollOffset={scrollOffset}
-							viewportHeight={listViewportHeight}
-							sortConfig={sortConfig}
-							columnWidths={columnWidths}
-							width={contentWidth}
-							height={listHeight}
-							isActive={activePanel === "list"}
-						/>
-						{selectedEntry && detailHeight > 0 && (
-							<DetailPanel
-								entry={selectedEntry}
-								activePanel={activePanel}
-								requestTab={requestTab}
-								responseTab={responseTab}
-								width={contentWidth}
-								height={detailHeight}
-							/>
-						)}
-					</Box>
-				</Box>
-				<StatusBar
-					port={port}
-					requestCount={sortedEntries.length}
-					selectedIndex={selectedIndex}
-					columns={columns}
-					activePanel={activePanel}
-					notification={notification}
+		<Box flexDirection="column" height={rows}>
+			<Box flexDirection="row" height={available}>
+				<DomainSidebar
+					items={visibleItems}
+					selectedIndex={sidebarSelectedIndex}
+					scrollOffset={sidebarScrollOffset}
+					viewportHeight={sidebarViewportHeight}
+					width={SIDEBAR_WIDTH}
+					height={available}
+					isActive={activePanel === "sidebar"}
 				/>
+				<Box flexDirection="column" width={contentWidth}>
+					<RequestList
+						entries={sortedEntries}
+						selectedIndex={selectedIndex}
+						scrollOffset={scrollOffset}
+						viewportHeight={listViewportHeight}
+						sortConfig={sortConfig}
+						columnWidths={columnWidths}
+						width={contentWidth}
+						height={listHeight}
+						isActive={activePanel === "list"}
+					/>
+					{selectedEntry && detailHeight > 0 && (
+						<DetailPanel
+							entry={selectedEntry}
+							activePanel={activePanel}
+							requestTab={requestTab}
+							responseTab={responseTab}
+							width={contentWidth}
+							height={detailHeight}
+						/>
+					)}
+				</Box>
 			</Box>
-		</SpinnerProvider>
+			<StatusBar
+				port={port}
+				requestCount={sortedEntries.length}
+				selectedIndex={selectedIndex}
+				columns={columns}
+				activePanel={activePanel}
+				notification={notification}
+			/>
+		</Box>
 	);
 }

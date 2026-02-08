@@ -1,7 +1,6 @@
 import { Text } from "ink";
 import type { TrafficEntry } from "../store/index.js";
 import { PRIMARY_COLOR } from "../theme.js";
-import { Spinner } from "./SpinnerContext.js";
 
 type Props = {
 	entry: TrafficEntry;
@@ -106,14 +105,9 @@ export function RequestRow({ entry, isSelected, columnWidths }: Props) {
 			<Text> </Text>
 			<Text>{url}</Text>
 			<Text> </Text>
-			{entry.state === "pending" ? (
-				<Text dimColor>
-					<Spinner />
-					{" ".repeat(Math.max(0, columnWidths.status - 1))}
-				</Text>
-			) : (
-				<Text color={statusColor}>{status}</Text>
-			)}
+			<Text color={statusColor} dimColor={entry.state === "pending"}>
+				{status}
+			</Text>
 			<Text> </Text>
 			<Text dimColor={entry.state === "pending"}>{duration}</Text>
 			<Text> </Text>

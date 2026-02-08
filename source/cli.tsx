@@ -101,10 +101,15 @@ function cleanup() {
 	if (proxyService) disableSystemProxy(proxyService);
 }
 
-async function onQuit() {
-	cleanup();
+async function onQuit(step: (msg: string) => void) {
+	if (proxyService) {
+		step("Restoring system proxy settings…");
+		disableSystemProxy(proxyService);
+	}
+	step("Stopping proxy server…");
 	store.destroy();
 	await proxy.stop();
+	step("Done.");
 }
 
 process.on("SIGINT", () => {

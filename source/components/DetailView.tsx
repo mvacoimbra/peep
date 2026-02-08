@@ -15,7 +15,6 @@ import { decompressBody } from "../utils/decompress.js";
 import { formatBytes } from "../utils/formatBytes.js";
 import { highlightBody } from "../utils/highlightBody.js";
 import { BorderedBox } from "./BorderedBox.js";
-import { Spinner } from "./SpinnerContext.js";
 
 type Props = {
 	entry: TrafficEntry;
@@ -190,10 +189,7 @@ export function DetailView({
 			</Text>
 			{side === "response" && entry.state === "pending" ? (
 				<Box paddingLeft={1} paddingTop={1}>
-					<Text dimColor={!isActive}>
-						<Spinner />
-						<Text> Waiting for response…</Text>
-					</Text>
+					<Text dimColor={!isActive}> Waiting for response…</Text>
 				</Box>
 			) : (
 				visibleLines.map((line, i) => (
