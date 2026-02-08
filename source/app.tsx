@@ -13,7 +13,7 @@ import { useTerminalDimensions } from "./hooks/useTerminalDimensions.js";
 import { useTrafficEntries } from "./hooks/useTrafficEntries.js";
 import type { TrafficStore } from "./store/index.js";
 
-export type QuitStep = (message: string) => void;
+export type QuitStep = (message: string, replaceLast?: boolean) => void;
 
 type Props = {
 	store: TrafficStore;
@@ -41,8 +41,11 @@ export default function App({ store, port, onQuit }: Props) {
 	useEffect(() => {
 		if (!quitting) return;
 		let cancelled = false;
-		const step: QuitStep = (message) => {
-			if (!cancelled) setQuitSteps((prev) => [...prev, message]);
+		const step: QuitStep = (message, replaceLast) => {
+			if (!cancelled)
+				setQuitSteps((prev) =>
+					replaceLast ? [...prev.slice(0, -1), message] : [...prev, message],
+				);
 		};
 		onQuit(step).finally(() => {
 			if (!cancelled) exit();

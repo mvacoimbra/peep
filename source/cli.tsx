@@ -101,15 +101,22 @@ function cleanup() {
 	if (proxyService) disableSystemProxy(proxyService);
 }
 
-async function onQuit(step: (msg: string) => void) {
+async function onQuit(step: (msg: string, replace?: boolean) => void) {
+	let t = performance.now();
 	if (proxyService) {
-		step("Restoring system proxy settings…");
+		step("Restoring system proxy…");
 		disableSystemProxy(proxyService);
+		step(`Restored system proxy (${elapsed(t)})`, true);
 	}
+	t = performance.now();
 	step("Stopping proxy server…");
 	store.destroy();
 	await proxy.stop();
-	step("Done.");
+	step(`Stopped proxy server (${elapsed(t)})`, true);
+}
+
+function elapsed(start: number): string {
+	return `${Math.round(performance.now() - start)}ms`;
 }
 
 process.on("SIGINT", () => {
