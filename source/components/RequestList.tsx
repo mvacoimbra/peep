@@ -11,6 +11,7 @@ type Props = {
 	viewportHeight: number;
 	sortConfig: SortConfig | null;
 	columnWidths: {
+		id: number;
 		method: number;
 		status: number;
 		duration: number;
@@ -23,6 +24,7 @@ type Props = {
 };
 
 const COLUMN_LABELS: Record<SortColumn, string> = {
+	id: "#",
 	method: "Method",
 	url: "URL",
 	status: "Status",
@@ -84,6 +86,10 @@ export function RequestList({
 			isActive={isActive}
 		>
 			<Text bold dimColor={!isActive}>
+				<Text> </Text>
+				<Text>
+					{headerLabel(COLUMN_LABELS.id, "id", sortConfig, columnWidths.id)}
+				</Text>
 				<Text> </Text>
 				<Text>
 					{headerLabel(

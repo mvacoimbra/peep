@@ -21,11 +21,12 @@ type Props = {
 	onQuit: (step: QuitStep) => Promise<void>;
 };
 
+const COL_ID = 4;
 const COL_METHOD = 7;
 const COL_STATUS = 6;
 const COL_DURATION = 8;
 const COL_SIZE = 7;
-const COL_PADDING = 10; // leading space + 4 separators (1 each) + trailing
+const COL_PADDING = 12; // leading space + 5 separators (1 each) + trailing
 const STATUS_BAR_HEIGHT = 1;
 const LIST_CHROME_LINES = 3; // border top + header row + border bottom
 const SIDEBAR_BORDER_LINES = 2; // top + bottom border
@@ -121,6 +122,7 @@ export default function App({ store, port, onQuit }: Props) {
 	const colUrl = Math.max(
 		10,
 		listInnerWidth -
+			COL_ID -
 			COL_METHOD -
 			COL_STATUS -
 			COL_DURATION -
@@ -172,6 +174,7 @@ export default function App({ store, port, onQuit }: Props) {
 	);
 
 	const columnWidths = {
+		id: COL_ID,
 		method: COL_METHOD,
 		status: COL_STATUS,
 		duration: COL_DURATION,

@@ -2,7 +2,13 @@ import { useInput } from "ink";
 import { useCallback, useMemo, useState } from "react";
 import type { TrafficEntry } from "../store/index.js";
 
-export type SortColumn = "method" | "url" | "status" | "duration" | "size";
+export type SortColumn =
+	| "id"
+	| "method"
+	| "url"
+	| "status"
+	| "duration"
+	| "size";
 export type SortDirection = "asc" | "desc";
 export type SortConfig = { column: SortColumn; direction: SortDirection };
 
@@ -18,6 +24,7 @@ type Result = {
 };
 
 const COLUMN_KEYS: Record<string, SortColumn> = {
+	i: "id",
 	m: "method",
 	u: "url",
 	s: "status",
@@ -36,6 +43,8 @@ function compareEntries(
 	column: SortColumn,
 ): number {
 	switch (column) {
+		case "id":
+			return a.seq - b.seq;
 		case "method":
 			return a.request.method.localeCompare(b.request.method);
 		case "url":
@@ -106,10 +115,13 @@ export function useSorting({ entries, isActive = true }: Options): Result {
 	);
 
 	const sortedEntries = useMemo(() => {
-		if (!sortConfig) return entries;
-		const multiplier = sortConfig.direction === "asc" ? 1 : -1;
+		const config = sortConfig ?? {
+			column: "id" as SortColumn,
+			direction: "desc" as SortDirection,
+		};
+		const multiplier = config.direction === "asc" ? 1 : -1;
 		return [...entries].sort(
-			(a, b) => multiplier * compareEntries(a, b, sortConfig.column),
+			(a, b) => multiplier * compareEntries(a, b, config.column),
 		);
 	}, [entries, sortConfig]);
 

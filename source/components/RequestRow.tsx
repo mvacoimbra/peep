@@ -6,6 +6,7 @@ type Props = {
 	entry: TrafficEntry;
 	isSelected: boolean;
 	columnWidths: {
+		id: number;
 		method: number;
 		status: number;
 		duration: number;
@@ -72,7 +73,12 @@ function truncate(text: string, maxLen: number): string {
 	return `${text.slice(0, maxLen - 1)}…`;
 }
 
+function formatSeq(seq: number, width: number): string {
+	return String(seq).slice(0, width).padStart(width);
+}
+
 export function RequestRow({ entry, isSelected, columnWidths }: Props) {
+	const id = formatSeq(entry.seq, columnWidths.id);
 	const method = formatMethod(entry.request.method, columnWidths.method);
 	const url = truncate(entry.request.path, columnWidths.url);
 	const status = formatStatus(entry, columnWidths.status);
@@ -84,6 +90,8 @@ export function RequestRow({ entry, isSelected, columnWidths }: Props) {
 	if (isSelected) {
 		return (
 			<Text backgroundColor={PRIMARY_COLOR} color="black">
+				<Text> </Text>
+				<Text>{id}</Text>
 				<Text> </Text>
 				<Text>{method}</Text>
 				<Text> </Text>
@@ -100,6 +108,8 @@ export function RequestRow({ entry, isSelected, columnWidths }: Props) {
 
 	return (
 		<Text>
+			<Text> </Text>
+			<Text dimColor>{id}</Text>
 			<Text> </Text>
 			<Text color={methodColor}>{method}</Text>
 			<Text> </Text>

@@ -28,6 +28,7 @@ export class TrafficStore {
 	readonly #order: RequestId[] = [];
 	readonly #emitter: EventEmitter & TypedEmitter;
 	readonly #proxy: ProxyServer;
+	#nextSeq = 1;
 
 	constructor(proxy: ProxyServer) {
 		this.#proxy = proxy;
@@ -56,6 +57,7 @@ export class TrafficStore {
 	clear(): void {
 		this.#entries.clear();
 		this.#order.length = 0;
+		this.#nextSeq = 1;
 		this.#emitter.emit("clear");
 	}
 
@@ -82,6 +84,7 @@ export class TrafficStore {
 	#onRequest = (event: ProxyRequestEvent): void => {
 		const entry: TrafficEntry = {
 			id: event.id,
+			seq: this.#nextSeq++,
 			request: event,
 			state: "pending",
 		};

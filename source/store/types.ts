@@ -6,6 +6,7 @@ import type {
 
 export type TrafficEntry = {
 	id: RequestId;
+	seq: number;
 	request: ProxyRequestEvent;
 	response?: ProxyResponseEvent;
 	state: "pending" | "complete" | "error";
