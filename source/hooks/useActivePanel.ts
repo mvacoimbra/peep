@@ -17,7 +17,7 @@ export function useActivePanel({
 	hasSelection,
 	awaitingColumn,
 }: Options): Result {
-	const [activePanel, setActivePanel] = useState<Panel>("list");
+	const [activePanel, setActivePanel] = useState<Panel>("sidebar");
 
 	// Reset to list when selection is lost (but keep sidebar accessible)
 	useEffect(() => {

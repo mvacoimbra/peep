@@ -21,8 +21,8 @@ type Result = {
 const TABS: DetailTab[] = ["headers", "body", "raw"];
 
 export function useDetailTabs({ activePanel, selectedEntry }: Options): Result {
-	const [requestTab, setRequestTab] = useState<DetailTab>("headers");
-	const [responseTab, setResponseTab] = useState<DetailTab>("headers");
+	const [requestTab, setRequestTab] = useState<DetailTab>("body");
+	const [responseTab, setResponseTab] = useState<DetailTab>("body");
 	const [notification, setNotification] = useState("");
 	const timerRef = useRef<ReturnType<typeof setTimeout>>();
 
