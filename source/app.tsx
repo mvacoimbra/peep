@@ -141,10 +141,16 @@ export default function App({ store, port, onQuit }: Props) {
 			COL_PADDING,
 	);
 
+	const requestKeys = useMemo(
+		() => sortedEntries.map((e) => e.id),
+		[sortedEntries],
+	);
+
 	const { selectedIndex, scrollOffset } = useListNavigation({
 		itemCount: sortedEntries.length,
 		viewportHeight: listViewportHeight,
 		isActive: activePanel === "list" && !awaitingColumn,
+		keys: requestKeys,
 	});
 
 	const { requestTab, responseTab, notification } = useDetailTabs({
