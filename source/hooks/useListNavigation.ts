@@ -5,6 +5,7 @@ type Options = {
 	itemCount: number;
 	viewportHeight: number;
 	isActive?: boolean;
+	keys?: string[];
 };
 
 type Result = {
@@ -18,19 +19,42 @@ export function useListNavigation({
 	itemCount,
 	viewportHeight,
 	isActive = true,
+	keys,
 }: Options): Result {
 	const [selectedIndex, setSelectedIndex] = useState(0);
 	const gPressedAt = useRef<number | null>(null);
 	const prevItemCount = useRef(itemCount);
+	const prevKeysRef = useRef(keys);
+	const selectedRef = useRef(selectedIndex);
+	selectedRef.current = selectedIndex;
+
+	// Key-based stabilization: when keys change, find the previously selected
+	// key in the new array and move the index to match
+	useEffect(() => {
+		const prev = prevKeysRef.current;
+		prevKeysRef.current = keys;
+		if (!keys || !prev) return;
+		const prevKey = prev[selectedRef.current];
+		if (!prevKey) return;
+		const newIdx = keys.indexOf(prevKey);
+		if (newIdx !== -1 && newIdx !== selectedRef.current) {
+			setSelectedIndex(newIdx);
+		}
+	}, [keys]);
 
 	// Auto-follow: if user was at the last item and a new one arrives, stay at bottom
+	// Disabled when keys are provided (keyed lists stabilize by identity instead)
 	useEffect(() => {
+		if (keys) {
+			prevItemCount.current = itemCount;
+			return;
+		}
 		const wasAtEnd = selectedIndex === prevItemCount.current - 1;
 		prevItemCount.current = itemCount;
 		if (wasAtEnd && itemCount > 0) {
 			setSelectedIndex(itemCount - 1);
 		}
-	}, [itemCount, selectedIndex]);
+	}, [itemCount, selectedIndex, keys]);
 
 	// Clamp selectedIndex if itemCount shrinks
 	useEffect(() => {

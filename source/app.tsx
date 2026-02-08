@@ -78,6 +78,16 @@ export default function App({ store, port, onQuit }: Props) {
 	const { visibleItems, groups, expandAtIndex, collapseAtIndex } =
 		useDomainGroups(entries);
 
+	const sidebarKeys = useMemo(
+		() =>
+			visibleItems.map((item) => {
+				if (item.type === "all") return "all";
+				if (item.type === "group") return `group:${item.baseDomain}`;
+				return `domain:${item.host}`;
+			}),
+		[visibleItems],
+	);
+
 	// Sidebar navigation — uses activePanel directly (not a ref)
 	const {
 		selectedIndex: sidebarSelectedIndex,
@@ -86,6 +96,7 @@ export default function App({ store, port, onQuit }: Props) {
 		itemCount: visibleItems.length,
 		viewportHeight: sidebarViewportHeight,
 		isActive: activePanel === "sidebar",
+		keys: sidebarKeys,
 	});
 	sidebarSelectedRef.current = sidebarSelectedIndex;
 
