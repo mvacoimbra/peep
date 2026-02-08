@@ -33,6 +33,8 @@ export class ProxyServer {
 	readonly #server: http.Server;
 	readonly #emitter: EventEmitter & TypedEmitter;
 	readonly #certCache = new Map<string, { certPem: string; keyPem: string }>();
+	readonly #tunnelSockets = new Set<net.Socket>();
+	readonly #mitmServers = new Set<http.Server>();
 
 	constructor(config: ProxyConfig) {
 		this.#config = config;
@@ -52,6 +54,17 @@ export class ProxyServer {
 	}
 
 	stop(): Promise<void> {
+		for (const socket of this.#tunnelSockets) {
+			socket.destroy();
+		}
+		this.#tunnelSockets.clear();
+
+		for (const server of this.#mitmServers) {
+			server.closeAllConnections();
+			server.close();
+		}
+		this.#mitmServers.clear();
+
 		return new Promise((resolve, reject) => {
 			this.#server.close((error) => {
 				if (error) {
@@ -186,6 +199,11 @@ export class ProxyServer {
 			clientSocket.pipe(upstreamSocket);
 		});
 
+		this.#tunnelSockets.add(upstreamSocket);
+		upstreamSocket.once("close", () =>
+			this.#tunnelSockets.delete(upstreamSocket),
+		);
+
 		upstreamSocket.on("error", (error) => {
 			this.#emitter.emit("error", { id, error, phase: "connect" });
 			clientSocket.end();
@@ -285,9 +303,11 @@ export class ProxyServer {
 			},
 		);
 
+		this.#mitmServers.add(mitmServer);
 		mitmServer.emit("connection", tlsSocket);
 
 		const cleanup = () => {
+			this.#mitmServers.delete(mitmServer);
 			mitmServer.close();
 		};
 
