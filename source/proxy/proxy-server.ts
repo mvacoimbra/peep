@@ -33,6 +33,7 @@ export class ProxyServer {
 	readonly #server: http.Server;
 	readonly #emitter: EventEmitter & TypedEmitter;
 	readonly #certCache = new Map<string, { certPem: string; keyPem: string }>();
+	readonly #sockets = new Set<net.Socket>();
 	readonly #tunnelSockets = new Set<net.Socket>();
 	readonly #mitmServers = new Set<http.Server>();
 
@@ -41,6 +42,10 @@ export class ProxyServer {
 		this.#emitter = new EventEmitter() as EventEmitter & TypedEmitter;
 		this.#server = http.createServer(this.#handleRequest);
 		this.#server.on("connect", this.#handleConnect);
+		this.#server.on("connection", (socket: net.Socket) => {
+			this.#sockets.add(socket);
+			socket.once("close", () => this.#sockets.delete(socket));
+		});
 	}
 
 	start(): Promise<void> {
@@ -65,6 +70,11 @@ export class ProxyServer {
 		}
 		this.#mitmServers.clear();
 
+		for (const socket of this.#sockets) {
+			socket.destroy();
+		}
+		this.#sockets.clear();
+
 		return new Promise((resolve, reject) => {
 			this.#server.close((error) => {
 				if (error) {
@@ -73,7 +83,6 @@ export class ProxyServer {
 					resolve();
 				}
 			});
-			this.#server.closeAllConnections();
 		});
 	}
 
