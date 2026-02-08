@@ -38,8 +38,12 @@ function headerLabel(
 	sortConfig: SortConfig | null,
 	width: number,
 ): string {
-	if (sortConfig?.column === column) {
-		const arrow = sortConfig.direction === "asc" ? "▲" : "▼";
+	const effective = sortConfig ?? {
+		column: "id" as SortColumn,
+		direction: "desc",
+	};
+	if (effective.column === column) {
+		const arrow = effective.direction === "asc" ? "▲" : "▼";
 		return `${label}${arrow}`.slice(0, width).padEnd(width);
 	}
 	return label.padEnd(width);

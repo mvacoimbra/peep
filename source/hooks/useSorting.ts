@@ -20,16 +20,9 @@ type Options = {
 type Result = {
 	sortedEntries: TrafficEntry[];
 	sortConfig: SortConfig | null;
-	awaitingColumn: boolean;
-};
-
-const COLUMN_KEYS: Record<string, SortColumn> = {
-	i: "id",
-	m: "method",
-	u: "url",
-	s: "status",
-	d: "duration",
-	z: "size",
+	modalOpen: boolean;
+	selectColumn: (column: SortColumn) => void;
+	closeModal: () => void;
 };
 
 function getResponseSize(entry: TrafficEntry): number | null {
@@ -69,46 +62,36 @@ function compareEntries(
 
 export function useSorting({ entries, isActive = true }: Options): Result {
 	const [sortConfig, setSortConfig] = useState<SortConfig | null>(null);
-	const [awaitingColumn, setAwaitingColumn] = useState(false);
+	const [modalOpen, setModalOpen] = useState(false);
 
-	const handleReset = useCallback(() => {
-		setSortConfig(null);
-		setAwaitingColumn(false);
+	const selectColumn = useCallback((column: SortColumn) => {
+		setSortConfig((prev) => {
+			if (prev?.column === column) {
+				return {
+					column,
+					direction: prev.direction === "asc" ? "desc" : "asc",
+				};
+			}
+			return { column, direction: "asc" };
+		});
+		setModalOpen(false);
+	}, []);
+
+	const closeModal = useCallback(() => {
+		setModalOpen(false);
 	}, []);
 
 	useInput(
-		(input, key) => {
-			if (awaitingColumn) {
-				if (key.escape) {
-					setAwaitingColumn(false);
-					return;
-				}
+		(input) => {
+			if (modalOpen) return;
 
-				const column = COLUMN_KEYS[input];
-				if (column) {
-					setSortConfig((prev) => {
-						if (prev?.column === column) {
-							return {
-								column,
-								direction: prev.direction === "asc" ? "desc" : "asc",
-							};
-						}
-						return { column, direction: "asc" };
-					});
-					setAwaitingColumn(false);
-				}
-				return;
-			}
-
-			// 's' enters sort mode
 			if (input === "s") {
-				setAwaitingColumn(true);
+				setModalOpen(true);
 				return;
 			}
 
-			// 'S' resets sort
 			if (input === "S") {
-				handleReset();
+				setSortConfig(null);
 			}
 		},
 		{ isActive },
@@ -125,5 +108,5 @@ export function useSorting({ entries, isActive = true }: Options): Result {
 		);
 	}, [entries, sortConfig]);
 
-	return { sortedEntries, sortConfig, awaitingColumn };
+	return { sortedEntries, sortConfig, modalOpen, selectColumn, closeModal };
 }

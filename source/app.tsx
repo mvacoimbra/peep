@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DetailPanel } from "./components/DetailPanel.js";
 import { DomainSidebar } from "./components/DomainSidebar.js";
 import { RequestList } from "./components/RequestList.js";
+import { SortModal } from "./components/SortModal.js";
 import { StatusBar } from "./components/StatusBar.js";
 import { useActivePanel } from "./hooks/useActivePanel.js";
 import { useDetailTabs } from "./hooks/useDetailTabs.js";
@@ -60,7 +61,7 @@ export default function App({ store, port, onQuit }: Props) {
 	// which come from hooks that need activePanel. Refs use previous render values
 	// for those guards, while activePanel itself is always fresh.
 	const hasSelectionRef = useRef(false);
-	const awaitingColumnRef = useRef(false);
+	const sortModalOpenRef = useRef(false);
 	const sidebarSelectedRef = useRef(0);
 
 	const available = Math.max(1, rows - STATUS_BAR_HEIGHT);
@@ -71,7 +72,7 @@ export default function App({ store, port, onQuit }: Props) {
 	// Active panel — called first so activePanel is fresh for isActive guards
 	const { activePanel, setActivePanel } = useActivePanel({
 		hasSelection: hasSelectionRef.current,
-		awaitingColumn: awaitingColumnRef.current,
+		awaitingColumn: sortModalOpenRef.current,
 	});
 
 	// Domain grouping (expand/collapse, no dependency on selected index)
@@ -113,16 +114,17 @@ export default function App({ store, port, onQuit }: Props) {
 		return entries.filter((e) => hosts.has(e.request.host));
 	}, [entries, sidebarSelectedIndex, visibleItems, groups]);
 
-	const { sortedEntries, sortConfig, awaitingColumn } = useSorting({
-		entries: filteredEntries,
-		isActive: activePanel === "list",
-	});
+	const { sortedEntries, sortConfig, modalOpen, selectColumn, closeModal } =
+		useSorting({
+			entries: filteredEntries,
+			isActive: activePanel === "list",
+		});
 
 	const hasEntries = sortedEntries.length > 0;
 
 	// Update refs for next render
 	hasSelectionRef.current = hasEntries;
-	awaitingColumnRef.current = awaitingColumn;
+	sortModalOpenRef.current = modalOpen;
 
 	const listHeight = hasEntries
 		? Math.max(LIST_CHROME_LINES + 1, Math.floor(available * 0.4))
@@ -149,7 +151,7 @@ export default function App({ store, port, onQuit }: Props) {
 	const { selectedIndex, scrollOffset } = useListNavigation({
 		itemCount: sortedEntries.length,
 		viewportHeight: listViewportHeight,
-		isActive: activePanel === "list" && !awaitingColumn,
+		isActive: activePanel === "list" && !modalOpen,
 		keys: requestKeys,
 	});
 
@@ -165,7 +167,7 @@ export default function App({ store, port, onQuit }: Props) {
 					setQuitting(true);
 					return;
 				}
-				if (awaitingColumn) return;
+				if (modalOpen) return;
 				if (activePanel === "sidebar") {
 					if (key.return) {
 						setActivePanel("list");
@@ -180,13 +182,7 @@ export default function App({ store, port, onQuit }: Props) {
 					}
 				}
 			},
-			[
-				awaitingColumn,
-				activePanel,
-				expandAtIndex,
-				collapseAtIndex,
-				setActivePanel,
-			],
+			[modalOpen, activePanel, expandAtIndex, collapseAtIndex, setActivePanel],
 		),
 	);
 
@@ -217,6 +213,19 @@ export default function App({ store, port, onQuit }: Props) {
 
 	return (
 		<Box flexDirection="column" height={rows}>
+			{modalOpen && (
+				<Box
+					position="absolute"
+					marginTop={Math.max(0, Math.floor((rows - 8) / 2))}
+					marginLeft={Math.max(0, Math.floor((columns - 22) / 2))}
+				>
+					<SortModal
+						sortConfig={sortConfig}
+						onSelect={selectColumn}
+						onClose={closeModal}
+					/>
+				</Box>
+			)}
 			<Box flexDirection="row" height={available}>
 				<DomainSidebar
 					items={visibleItems}
