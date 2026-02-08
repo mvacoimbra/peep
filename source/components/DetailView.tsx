@@ -25,7 +25,7 @@ type Props = {
 	height: number;
 };
 
-const TABS: DetailTab[] = ["headers", "body", "raw"];
+const TABS: DetailTab[] = ["body", "headers", "raw"];
 const TAB_LABELS: Record<DetailTab, string> = {
 	headers: "Headers",
 	body: "Body",

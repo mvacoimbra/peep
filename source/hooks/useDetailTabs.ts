@@ -18,7 +18,7 @@ type Result = {
 	notification: string;
 };
 
-const TABS: DetailTab[] = ["headers", "body", "raw"];
+const TABS: DetailTab[] = ["body", "headers", "raw"];
 
 export function useDetailTabs({ activePanel, selectedEntry }: Options): Result {
 	const [requestTab, setRequestTab] = useState<DetailTab>("body");
