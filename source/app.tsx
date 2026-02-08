@@ -1,9 +1,10 @@
-import { Box, useApp, useInput } from "ink";
-import { useCallback, useMemo, useRef } from "react";
+import { Box, Text, useApp, useInput } from "ink";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DetailPanel } from "./components/DetailPanel.js";
 import { DomainSidebar } from "./components/DomainSidebar.js";
 import { RequestList } from "./components/RequestList.js";
 import { SpinnerProvider } from "./components/SpinnerContext.js";
+import { Spinner } from "./components/SpinnerContext.js";
 import { StatusBar } from "./components/StatusBar.js";
 import { useActivePanel } from "./hooks/useActivePanel.js";
 import { useDetailTabs } from "./hooks/useDetailTabs.js";
@@ -17,6 +18,7 @@ import type { TrafficStore } from "./store/index.js";
 type Props = {
 	store: TrafficStore;
 	port: number;
+	onQuit: () => Promise<void>;
 };
 
 const COL_METHOD = 7;
@@ -29,10 +31,22 @@ const LIST_CHROME_LINES = 3; // border top + header row + border bottom
 const SIDEBAR_BORDER_LINES = 2; // top + bottom border
 const SIDEBAR_WIDTH = 22;
 
-export default function App({ store, port }: Props) {
+export default function App({ store, port, onQuit }: Props) {
 	const { exit } = useApp();
+	const [quitting, setQuitting] = useState(false);
 	const entries = useTrafficEntries(store);
 	const { columns, rows } = useTerminalDimensions();
+
+	useEffect(() => {
+		if (!quitting) return;
+		let cancelled = false;
+		onQuit().finally(() => {
+			if (!cancelled) exit();
+		});
+		return () => {
+			cancelled = true;
+		};
+	}, [quitting, onQuit, exit]);
 
 	// Refs to break circular deps: useActivePanel needs hasEntries/awaitingColumn
 	// which come from hooks that need activePanel. Refs use previous render values
@@ -122,7 +136,7 @@ export default function App({ store, port }: Props) {
 		useCallback(
 			(input: string, key: { return: boolean }) => {
 				if (input === "q") {
-					exit();
+					setQuitting(true);
 					return;
 				}
 				if (awaitingColumn) return;
@@ -141,7 +155,6 @@ export default function App({ store, port }: Props) {
 				}
 			},
 			[
-				exit,
 				awaitingColumn,
 				activePanel,
 				expandAtIndex,
@@ -160,6 +173,24 @@ export default function App({ store, port }: Props) {
 	};
 
 	const selectedEntry = sortedEntries[selectedIndex];
+
+	if (quitting) {
+		return (
+			<SpinnerProvider>
+				<Box
+					flexDirection="column"
+					height={rows}
+					justifyContent="center"
+					alignItems="center"
+				>
+					<Text>
+						<Spinner />
+						<Text> Shutting down…</Text>
+					</Text>
+				</Box>
+			</SpinnerProvider>
+		);
+	}
 
 	return (
 		<SpinnerProvider>

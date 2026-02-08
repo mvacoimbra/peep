@@ -101,6 +101,12 @@ function cleanup() {
 	if (proxyService) disableSystemProxy(proxyService);
 }
 
+async function onQuit() {
+	cleanup();
+	store.destroy();
+	await proxy.stop();
+}
+
 process.on("SIGINT", () => {
 	cleanup();
 	process.exit(0);
@@ -110,10 +116,8 @@ process.on("SIGTERM", () => {
 	process.exit(0);
 });
 
-const { waitUntilExit } = render(<App store={store} port={port} />);
+const { waitUntilExit } = render(
+	<App store={store} port={port} onQuit={onQuit} />,
+);
 
 await waitUntilExit();
-
-cleanup();
-store.destroy();
-await proxy.stop();
