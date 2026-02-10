@@ -1,12 +1,32 @@
 {
-	"name": "peep",
-	"version": "0.0.0",
+	"name": "peep-proxy",
+	"version": "0.1.0",
+	"description": "A TUI HTTP proxy for developers. Proxyman, but in your terminal.",
 	"license": "MIT",
-	"bin": "dist/cli.js",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/mvacoimbra/peep.git"
+	},
+	"homepage": "https://github.com/mvacoimbra/peep#readme",
+	"author": "Matheus Coimbra",
+	"keywords": [
+		"proxy",
+		"http",
+		"https",
+		"tui",
+		"terminal",
+		"debug",
+		"inspect",
+		"traffic",
+		"ink"
+	],
+	"bin": {
+		"peep": "dist/cli.js"
+	},
 	"type": "module",
 	"packageManager": "pnpm@10.18.1",
 	"engines": {
-		"node": ">=16"
+		"node": ">=18"
 	},
 	"scripts": {
 		"build": "tsc",
