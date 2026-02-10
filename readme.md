@@ -48,7 +48,7 @@ Peep will automatically configure itself as the system HTTP proxy and install it
 ## Install
 
 ```bash
-npm install --global peep
+npm install --global peep-proxy
 ```
 
 ## Development
