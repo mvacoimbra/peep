@@ -1,6 +1,6 @@
 {
 	"name": "peep-proxy",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "A TUI HTTP proxy for developers. Proxyman, but in your terminal.",
 	"license": "MIT",
 	"repository": {
