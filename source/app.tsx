@@ -213,19 +213,6 @@ export default function App({ store, port, onQuit }: Props) {
 
 	return (
 		<Box flexDirection="column" height={rows}>
-			{modalOpen && (
-				<Box
-					position="absolute"
-					marginTop={Math.max(0, Math.floor((rows - 8) / 2))}
-					marginLeft={Math.max(0, Math.floor((columns - 22) / 2))}
-				>
-					<SortModal
-						sortConfig={sortConfig}
-						onSelect={selectColumn}
-						onClose={closeModal}
-					/>
-				</Box>
-			)}
 			<Box flexDirection="row" height={available}>
 				<DomainSidebar
 					items={visibleItems}
@@ -236,29 +223,44 @@ export default function App({ store, port, onQuit }: Props) {
 					height={available}
 					isActive={activePanel === "sidebar"}
 				/>
-				<Box flexDirection="column" width={contentWidth}>
-					<RequestList
-						entries={sortedEntries}
-						selectedIndex={selectedIndex}
-						scrollOffset={scrollOffset}
-						viewportHeight={listViewportHeight}
-						sortConfig={sortConfig}
-						columnWidths={columnWidths}
+				{modalOpen ? (
+					<Box
 						width={contentWidth}
-						height={listHeight}
-						isActive={activePanel === "list"}
-					/>
-					{selectedEntry && detailHeight > 0 && (
-						<DetailPanel
-							entry={selectedEntry}
-							activePanel={activePanel}
-							requestTab={requestTab}
-							responseTab={responseTab}
-							width={contentWidth}
-							height={detailHeight}
+						height={available}
+						alignItems="center"
+						justifyContent="center"
+					>
+						<SortModal
+							sortConfig={sortConfig}
+							onSelect={selectColumn}
+							onClose={closeModal}
 						/>
-					)}
-				</Box>
+					</Box>
+				) : (
+					<Box flexDirection="column" width={contentWidth}>
+						<RequestList
+							entries={sortedEntries}
+							selectedIndex={selectedIndex}
+							scrollOffset={scrollOffset}
+							viewportHeight={listViewportHeight}
+							sortConfig={sortConfig}
+							columnWidths={columnWidths}
+							width={contentWidth}
+							height={listHeight}
+							isActive={activePanel === "list"}
+						/>
+						{selectedEntry && detailHeight > 0 && (
+							<DetailPanel
+								entry={selectedEntry}
+								activePanel={activePanel}
+								requestTab={requestTab}
+								responseTab={responseTab}
+								width={contentWidth}
+								height={detailHeight}
+							/>
+						)}
+					</Box>
+				)}
 			</Box>
 			<StatusBar
 				port={port}
