@@ -12,6 +12,11 @@ import type {
 	ProxyRequestEvent,
 	RequestId,
 } from "./types.js";
+import {
+	connectThroughProxy,
+	getUpstreamProxy,
+	shouldBypass,
+} from "./upstream.js";
 
 type TypedEmitter = {
 	on<K extends keyof ProxyEventMap>(
@@ -32,6 +37,7 @@ export class ProxyServer {
 	readonly #config: ProxyConfig;
 	readonly #server: http.Server;
 	readonly #emitter: EventEmitter & TypedEmitter;
+	readonly #upstream: { http?: URL; https?: URL };
 	readonly #certCache = new Map<string, { certPem: string; keyPem: string }>();
 	readonly #sockets = new Set<net.Socket>();
 	readonly #tunnelSockets = new Set<net.Socket>();
@@ -39,6 +45,7 @@ export class ProxyServer {
 
 	constructor(config: ProxyConfig) {
 		this.#config = config;
+		this.#upstream = getUpstreamProxy(config.upstreamProxy);
 		this.#emitter = new EventEmitter() as EventEmitter & TypedEmitter;
 		this.#server = http.createServer(this.#handleRequest);
 		this.#server.on("connect", this.#handleConnect);
@@ -135,13 +142,24 @@ export class ProxyServer {
 			};
 			this.#emitter.emit("request", requestEvent);
 
-			const upstreamOptions: http.RequestOptions = {
-				hostname: parsed.hostname,
-				port: parsed.port || 80,
-				path: parsed.pathname + parsed.search,
-				method: clientReq.method,
-				headers: clientReq.headers,
-			};
+			const upstreamHttp = this.#upstream.http;
+			const useUpstream = upstreamHttp && !shouldBypass(parsed.hostname);
+
+			const upstreamOptions: http.RequestOptions = useUpstream
+				? {
+						hostname: upstreamHttp.hostname,
+						port: Number(upstreamHttp.port) || 80,
+						path: clientReq.url,
+						method: clientReq.method,
+						headers: clientReq.headers,
+					}
+				: {
+						hostname: parsed.hostname,
+						port: parsed.port || 80,
+						path: parsed.pathname + parsed.search,
+						method: clientReq.method,
+						headers: clientReq.headers,
+					};
 
 			const upstreamReq = http.request(upstreamOptions, (upstreamRes) => {
 				const chunks: Buffer[] = [];
@@ -208,6 +226,49 @@ export class ProxyServer {
 			timestamp: Date.now(),
 		});
 
+		const upstreamHttps = this.#upstream.https;
+		const useUpstream = upstreamHttps && !shouldBypass(host);
+
+		if (useUpstream) {
+			connectThroughProxy(upstreamHttps, host, port).then(
+				(upstreamSocket) => {
+					clientSocket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
+					if (head.length > 0) {
+						upstreamSocket.write(head);
+					}
+					upstreamSocket.pipe(clientSocket);
+					clientSocket.pipe(upstreamSocket);
+
+					this.#tunnelSockets.add(upstreamSocket);
+					upstreamSocket.once("close", () =>
+						this.#tunnelSockets.delete(upstreamSocket),
+					);
+
+					upstreamSocket.on("error", (error) => {
+						this.#emitter.emit("error", {
+							id,
+							error,
+							phase: "connect",
+						});
+						clientSocket.end();
+					});
+
+					clientSocket.on("error", () => {
+						upstreamSocket.end();
+					});
+				},
+				(error) => {
+					this.#emitter.emit("error", {
+						id,
+						error: error as Error,
+						phase: "connect",
+					});
+					clientSocket.end();
+				},
+			);
+			return;
+		}
+
 		const upstreamSocket = net.connect(port, host, () => {
 			clientSocket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
 			if (head.length > 0) {
@@ -269,7 +330,7 @@ export class ProxyServer {
 				clientReq.on("data", (chunk: Buffer) => {
 					reqChunks.push(chunk);
 				});
-				clientReq.on("end", () => {
+				clientReq.on("end", async () => {
 					const reqBody = Buffer.concat(reqChunks);
 
 					const requestEvent: ProxyRequestEvent = {
@@ -291,6 +352,46 @@ export class ProxyServer {
 						method: clientReq.method,
 						headers: { ...clientReq.headers, host },
 					};
+
+					const upstreamHttps = this.#upstream.https;
+					const useUpstream = upstreamHttps && !shouldBypass(host);
+
+					if (useUpstream) {
+						try {
+							const tunnelSocket = await connectThroughProxy(
+								upstreamHttps,
+								host,
+								port,
+							);
+							const extraCa = this.#config.extraCaCerts;
+							upstreamOptions.createConnection = () =>
+								tls.connect({
+									socket: tunnelSocket,
+									servername: host,
+									...(extraCa?.length && {
+										ca: [...tls.rootCertificates, ...extraCa],
+									}),
+								});
+						} catch (error) {
+							this.#emitter.emit("error", {
+								id,
+								error: error as Error,
+								phase: "connect",
+							});
+							if (!clientRes.headersSent) {
+								clientRes.writeHead(502, {
+									"Content-Type": "text/plain",
+								});
+							}
+							clientRes.end("Bad Gateway");
+							return;
+						}
+					} else if (this.#config.extraCaCerts?.length) {
+						upstreamOptions.ca = [
+							...tls.rootCertificates,
+							...this.#config.extraCaCerts,
+						];
+					}
 
 					const upstreamReq = https.request(upstreamOptions, (upstreamRes) => {
 						const chunks: Buffer[] = [];

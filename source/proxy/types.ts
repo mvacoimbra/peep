@@ -9,6 +9,8 @@ export type ProxyConfig = {
 	port: number;
 	hostname?: string;
 	ca?: CaConfig;
+	upstreamProxy?: URL;
+	extraCaCerts?: string[];
 };
 
 export type RequestId = string;

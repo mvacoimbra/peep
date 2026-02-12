@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import { readFileSync } from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { render } from "ink";
@@ -21,10 +22,14 @@ const cli = meow(
 	  $ peep
 
 	Options
-		--port  Proxy port (default: 8080)
+		--port              Proxy port (default: 8080)
+		--upstream-proxy    Upstream proxy URL
+		--ca-cert           Path to additional CA certificate (PEM)
 
 	Examples
 	  $ peep --port=3128
+	  $ peep --upstream-proxy=http://proxy:8080
+	  $ peep --ca-cert=/path/to/zscaler-ca.pem
 `,
 	{
 		importMeta: import.meta,
@@ -32,6 +37,12 @@ const cli = meow(
 			port: {
 				type: "number",
 				default: 8080,
+			},
+			upstreamProxy: {
+				type: "string",
+			},
+			caCert: {
+				type: "string",
 			},
 		},
 	},
@@ -90,7 +101,28 @@ if (findNssProfiles().length > 0 && !isNssTrusted()) {
 	}
 }
 
-const proxy = new ProxyServer({ port, ca });
+const upstreamProxy = cli.flags.upstreamProxy
+	? new URL(cli.flags.upstreamProxy)
+	: undefined;
+
+const extraCaCerts: string[] = [];
+if (cli.flags.caCert) {
+	try {
+		extraCaCerts.push(readFileSync(cli.flags.caCert, "utf-8"));
+	} catch {
+		process.stderr.write(
+			`Failed to read CA certificate: ${cli.flags.caCert}\n`,
+		);
+		process.exit(1);
+	}
+}
+
+const proxy = new ProxyServer({
+	port,
+	ca,
+	upstreamProxy,
+	extraCaCerts: extraCaCerts.length > 0 ? extraCaCerts : undefined,
+});
 const store = new TrafficStore(proxy);
 
 await proxy.start();
